@@ -17,7 +17,7 @@
   --accent:#2f855a;
   --muted:#6b7280;
   --hour-height:60px;
-  --start-hour:8;
+  --start-hour:6;
   --end-hour:23;
 }
 *{box-sizing:border-box;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial}
@@ -91,15 +91,43 @@ textarea{min-height:80px;resize:vertical}
 
 /* MOBILE VERTICAL: stacked day view */
 @media (max-width:420px){
-  .calendar-grid{display:block;padding:6px;gap:8px}
-  .day-block{display:block;margin-bottom:12px;background:transparent}
-  .day-block .day-inner{display:flex;gap:8px}
-  .day-block .hours-side{width:68px;background:transparent;border-radius:8px;padding:6px;box-sizing:border-box}
-  .day-block .hours-side .hour-label{height:40px;padding-top:10px;font-size:12px;text-align:left;padding-left:6px;color:var(--muted)}
-  .day-block .day-column-mobile{flex:1;background:var(--card);border-radius:8px;position:relative;min-height:320px;height:auto;box-shadow:0 4px 14px rgba(2,6,23,0.04);overflow:hidden}
+  .calendar-grid{
+    display:block;
+    padding:6px;
+    gap:8px;
+  }
+  .day-block{
+    display:block;
+    margin-bottom:12px;
+    background:transparent;
+  }
+  .day-block .day-inner{
+    display:flex;
+    gap:8px;
+  }
+  .day-block .hours-side{
+    width:68px;
+    background:transparent;
+    border-radius:8px;
+    padding:6px;
+    box-sizing:border-box;
+  }
+  .day-block .hours-side .hour-label{height:40px;padding-top:6px;font-size:12px;text-align:left;padding-left:6px;color:var(--muted)}
+  .day-block .day-column-mobile{
+    flex:1;
+    background:var(--card);
+    border-radius:8px;
+    position:relative;
+    min-height:320px;
+    height:auto;
+    box-shadow:0 4px 14px rgba(2,6,23,0.04);
+    overflow:hidden;
+  }
   .day-block .day-header{font-weight:700;margin-bottom:6px}
   .hour-line{border-bottom:1px dashed #eef2f6;height:40px}
 }
+
+#syncStatus{font-size:12px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -159,6 +187,7 @@ textarea{min-height:80px;resize:vertical}
 
   <div class="calendar panel">
     <div class="calendar-grid" id="calendarGrid">
+      <!-- El layout se genera dinámicamente -->
     </div>
   </div>
 </div>
@@ -171,20 +200,18 @@ const FIREBASE_CONFIG = {
   authDomain: "camp-sem-sant.firebaseapp.com",
   databaseURL: "https://camp-sem-sant-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "camp-sem-sant",
-  storageBucket: "camp-sem-sant.firebasedstorage.app",
+  storageBucket: "camp-sem-sant.firebasedapp.com",
   messagingSenderId: "483863490995",
   appId: "1:483863490995:web:5474b5a0984553baf29bc6"
 };
 let REMOTE_ENABLED = true;
 
 const DAYS=["Viernes 27","Sábado 28","Domingo 29","Lunes 30"];
-const HOUR_H=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--hour-height'))||60;
+let activities = [];
+let dayCols = [];
 
 const calendarGrid = document.getElementById('calendarGrid');
 const syncStatusEl = document.getElementById('syncStatus');
-const STORAGE_KEY = 'campamento-semanasanta-2026';
-let activities = [];
-let dayCols = [];
 
 const inputDay=document.getElementById('inputDay');
 const inputStart=document.getElementById('inputStart');
@@ -201,182 +228,142 @@ const btnExport=document.getElementById('btnExport');
 const btnImport=document.getElementById('btnImport');
 const fileInput=document.getElementById('fileInput');
 
-let editingId = null;
-let dbRef = null;
-let remoteLoaded = false;
+let editingId=null;
 
-/* ======================= Firebase init ======================= */
-function initFirebaseIfConfigured(){
-  try{
-    if(FIREBASE_CONFIG && Object.keys(FIREBASE_CONFIG).length>2 && typeof firebase !== 'undefined'){
-      firebase.initializeApp(FIREBASE_CONFIG);
-      firebase.auth().signInAnonymously().catch(()=>{});
-      dbRef = firebase.database().ref('activities');
-      REMOTE_ENABLED = true;
-      syncStatusEl.textContent = 'Modo: sincronización activa (Firebase)';
-      attachFirebaseListeners();
-    } else { REMOTE_ENABLED=false; syncStatusEl.textContent='Modo: local (sin Firebase)'; }
-  }catch(e){ REMOTE_ENABLED=false; syncStatusEl.textContent='Modo: local (error Firebase)'; console.warn(e); }
+// Configuración horas
+let START_H=6;
+let END_H=23;
+let HOUR_H=60;
+
+function timeToMinutes(t){ const [hh,mm]=String(t||'').split(':').map(Number); return hh*60+mm; }
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function resetForm(){ inputTitle.value=''; inputDesc.value=''; inputColor.value='#60a5fa'; inputStart.value='08:00'; inputEnd.value='09:00'; inputDay.value=DAYS[0]; editingId=null; btnAdd.style.display='inline-block'; btnUpdate.style.display='none'; btnDelete.style.display='none'; inputTitle.focus(); }
+function collectForm(){
+  const title=inputTitle.value.trim(); if(!title){ alert('Pon un nombre a la actividad'); inputTitle.focus(); return null; }
+  const start=inputStart.value; const end=inputEnd.value;
+  if(!start||!end){ alert('Pon hora de inicio y fin'); inputStart.focus(); return null; }
+  return { day: inputDay.value, start, end, title, desc: inputDesc.value.trim(), color: inputColor.value };
 }
 
-function attachFirebaseListeners(){
-  if(!dbRef) return;
-  dbRef.on('value', snapshot=>{
-    const data = snapshot.val()||{};
-    activities = Object.keys(data).map(k=>({id:k,...data[k]}));
-    try{ localStorage.setItem(STORAGE_KEY,JSON.stringify(activities)); }catch(e){}
-    renderAll();
-    remoteLoaded=true;
-  });
-}
-
-/* ======================= Rango dinámico de horas ======================= */
-function calcularRangoHoras(){
-  let minH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--start-hour'))||8;
-  let maxH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--end-hour'))||23;
-  for(const a of activities){
-    let s = timeToMinutes(a.start);
-    let e = timeToMinutes(a.end);
-    if(e <= s) e += 24*60;
-    minH = Math.min(minH, Math.floor(s/60));
-    maxH = Math.max(maxH, Math.ceil(e/60));
-  }
-  return [minH,maxH];
-}
-
-/* ======================= Construir calendario ======================= */
+/* =========================
+   Build calendar layout
+   ========================= */
 function buildCalendarLayout(){
-  const isNarrow = window.innerWidth <= 420;
+  const isNarrow=window.innerWidth<=420;
   calendarGrid.innerHTML='';
-  const [dynStartH,dynEndH]=calcularRangoHoras();
-  const totalH = dynEndH-dynStartH;
+
+  // calculamos rango dinámico de horas según actividades
+  let minMinutes = START_H*60;
+  let maxMinutes = END_H*60;
+  activities.forEach(a=>{
+    const s=timeToMinutes(a.start), e=timeToMinutes(a.end);
+    if(s<minMinutes) minMinutes=s;
+    if(e>maxMinutes) maxMinutes=e;
+  });
+  const startHour=Math.floor(minMinutes/60);
+  const endHour=Math.ceil(maxMinutes/60);
 
   if(!isNarrow){
+    // Desktop
     const empty=document.createElement('div'); calendarGrid.appendChild(empty);
-    for(const d of DAYS){ const h=document.createElement('div'); h.className='col-header'; h.textContent=d; calendarGrid.appendChild(h);}
+    for(const d of DAYS){ const h=document.createElement('div'); h.className='col-header'; h.textContent=d; calendarGrid.appendChild(h); }
     const hoursCol=document.createElement('div'); hoursCol.className='hour-col';
-    for(let hh=dynStartH; hh<dynEndH; hh++){ const lab=document.createElement('div'); lab.className='hour-label'; lab.textContent=String(hh).padStart(2,'0')+':00'; hoursCol.appendChild(lab);}
+    for(let hh=startHour; hh<endHour; hh++){
+      const lab=document.createElement('div'); lab.className='hour-label'; lab.textContent=String(hh).padStart(2,'0')+':00'; hoursCol.appendChild(lab);
+    }
     calendarGrid.appendChild(hoursCol);
     for(const d of DAYS){
       const col=document.createElement('div'); col.className='day-column'; col.dataset.day=d;
-      for(let hh=dynStartH; hh<dynEndH; hh++){ const line=document.createElement('div'); line.className='hour-line'; col.appendChild(line);}
+      for(let hh=startHour; hh<endHour; hh++){
+        const line=document.createElement('div'); line.className='hour-line'; col.appendChild(line);
+      }
       calendarGrid.appendChild(col);
     }
-    dayCols = Array.from(document.querySelectorAll('.day-column'));
+    dayCols=Array.from(document.querySelectorAll('.day-column'));
   } else {
+    // Mobile stacked
     for(const d of DAYS){
       const block=document.createElement('div'); block.className='day-block';
       const header=document.createElement('div'); header.className='day-header'; header.textContent=d; block.appendChild(header);
       const inner=document.createElement('div'); inner.className='day-inner';
       const hoursSide=document.createElement('div'); hoursSide.className='hours-side';
-      for(let hh=dynStartH; hh<dynEndH; hh++){ const lab=document.createElement('div'); lab.className='hour-label'; lab.textContent=String(hh).padStart(2,'0')+':00'; hoursSide.appendChild(lab);}
+      for(let m=startHour*60; m<endHour*60; m+=30){ // etiquetas cada 30 min
+        const lab=document.createElement('div'); lab.className='hour-label';
+        lab.textContent=String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+        hoursSide.appendChild(lab);
+      }
       inner.appendChild(hoursSide);
       const col=document.createElement('div'); col.className='day-column-mobile'; col.dataset.day=d;
-      for(let hh=dynStartH; hh<dynEndH; hh++){ const line=document.createElement('div'); line.className='hour-line'; col.appendChild(line);}
-      inner.appendChild(col); block.appendChild(inner); calendarGrid.appendChild(block);
+      for(let hh=startHour; hh<endHour; hh++){ const line=document.createElement('div'); line.className='hour-line'; col.appendChild(line); }
+      inner.appendChild(col);
+      block.appendChild(inner);
+      calendarGrid.appendChild(block);
     }
     dayCols=Array.from(document.querySelectorAll('.day-column-mobile'));
   }
-
-  // click handler
-  dayCols.forEach(col=>{
-    col.onclick=null;
-    col.addEventListener('click', ev=>{
-      if(ev.target.closest('.activity')) return;
-      const rect=col.getBoundingClientRect(); const y=ev.clientY-rect.top;
-      let [minH,maxH]=calcularRangoHoras();
-      const minutes=minH*60 + (y/HOUR_H)*60;
-      let hh=Math.floor(minutes/60); let mm=Math.round((minutes%60)/15)*15;
-      if(mm===60){ hh+=1; mm=0; }
-      inputDay.value=col.dataset.day;
-      inputStart.value=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
-      let endMin=minutes+60; let endH=Math.floor(endMin/60); let endM=Math.round((endMin%60)/15)*15;
-      if(endM===60){ endH+=1; endM=0; }
-      if(endH>=24){ endH=23; endM=59; }
-      inputEnd.value=String(endH).padStart(2,'0')+':'+String(endM).padStart(2,'0');
-      window.scrollTo({top:0,behavior:'smooth'}); inputTitle.focus();
-    });
-  });
 }
 
-/* ======================= Render ======================= */
+/* =========================
+   Render activities
+   ========================= */
 function renderAll(){
   buildCalendarLayout();
   dayCols.forEach(c=>Array.from(c.querySelectorAll('.activity')).forEach(n=>n.remove()));
-  const [dynStartH,dynEndH]=calcularRangoHoras();
-
   DAYS.forEach(day=>{
-    const acts=activities.filter(a=>a.day===day).map(a=>({...a,_startMin:timeToMinutes(a.start),_endMin:timeToMinutes(a.end)})).sort((a,b)=>a._startMin-a._startMin);
-    acts.forEach(a=>{
-      const col=dayCols.find(c=>c.dataset.day===day); if(!col) return;
-      let startM=a._startMin; let endM=a._endMin; if(endM<=startM) endM+=24*60;
-      const totalM=(dynEndH-dynStartH)*60;
-      const topPx=((startM-dynStartH*60)/totalM)*col.clientHeight;
-      const heightPx=((endM-startM)/totalM)*col.clientHeight;
-
-      const el=document.createElement('div'); el.className='activity';
-      el.style.top=topPx+'px'; el.style.height=Math.max(44,heightPx)+'px';
-      el.style.left='6px'; el.style.width='calc(100% - 12px)';
-      el.style.background=a.color||'#60a5fa';
-      el.dataset.id=a.id;
-      el.tabIndex=0;
-      el.innerHTML=`<div class="title">${a.title}</div><div class="desc">${a.desc}</div>`;
-      el.onclick=ev=>{
-        ev.stopPropagation(); editingId=a.id;
-        inputDay.value=a.day; inputStart.value=a.start; inputEnd.value=a.end;
-        inputTitle.value=a.title; inputDesc.value=a.desc; inputColor.value=a.color||'#60a5fa';
-        btnAdd.style.display='none'; btnUpdate.style.display='inline-block'; btnDelete.style.display='inline-block';
-      };
-      col.appendChild(el);
-    });
+    const acts=activities.filter(a=>a.day===day).map(a=>({...a,_startMin:timeToMinutes(a.start),_endMin:timeToMinutes(a.end)})).sort((a,b)=>a._startMin-b._startMin);
+    acts.forEach(a=>renderActivity(a));
   });
 }
 
-/* ======================= Util ======================= */
-function timeToMinutes(t){ const [hh,mm]=t.split(':').map(Number); return hh*60+mm; }
-function saveLocal(){ localStorage.setItem(STORAGE_KEY,JSON.stringify(activities)); }
-function resetForm(){ editingId=null; inputTitle.value=''; inputDesc.value=''; inputColor.value='#60a5fa'; btnAdd.style.display='inline-block'; btnUpdate.style.display='none'; btnDelete.style.display='none'; }
-
-/* ======================= CRUD ======================= */
-btnAdd.onclick=()=>{
-  const a={id:'id'+Date.now(), day:inputDay.value, start:inputStart.value, end:inputEnd.value, title:inputTitle.value, desc:inputDesc.value, color:inputColor.value};
-  activities.push(a);
-  if(REMOTE_ENABLED && dbRef){ dbRef.child(a.id).set(a); } else { saveLocal(); renderAll(); }
-  resetForm();
-};
-btnUpdate.onclick=()=>{
-  const a=activities.find(a=>a.id===editingId); if(!a) return;
-  a.day=inputDay.value; a.start=inputStart.value; a.end=inputEnd.value; a.title=inputTitle.value; a.desc=inputDesc.value; a.color=inputColor.value;
-  if(REMOTE_ENABLED && dbRef){ dbRef.child(a.id).set(a); } else { saveLocal(); renderAll(); }
-  resetForm();
-};
-btnDelete.onclick=()=>{
-  activities=activities.filter(a=>a.id!==editingId);
-  if(REMOTE_ENABLED && dbRef){ dbRef.child(editingId).remove(); } else { saveLocal(); renderAll(); }
-  resetForm();
-};
-btnReset.onclick=resetForm;
-btnPrint.onclick=()=>window.print();
-btnExport.onclick=()=>{ const blob=new Blob([JSON.stringify(activities,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='actividades.json'; a.click(); };
-btnImport.onclick=()=>fileInput.click();
-fileInput.onchange=e=>{
-  const file=e.target.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    try{ const data=JSON.parse(ev.target.result); activities=data; saveLocal(); renderAll(); }catch(e){alert('Error JSON');}
-  };
-  reader.readAsText(file);
-};
-
-/* ======================= Init ======================= */
-function init(){
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if(saved){ try{ activities=JSON.parse(saved); }catch(e){} }
-  renderAll();
-  initFirebaseIfConfigured();
+function renderActivity(a){
+  const col=dayCols.find(c=>c.dataset.day===a.day); if(!col) return;
+  const startMin=a._startMin,endMin=a._endMin;
+  const topPx=(startMin-START_H*60)/60*HOUR_H;
+  const heightPx=(endMin-startMin)/60*HOUR_H;
+  const el=document.createElement('div'); el.className='activity'; el.style.top=topPx+'px'; el.style.height=Math.max(44,heightPx)+'px';
+  el.style.left='6px'; el.style.width='calc(100% - 12px)';
+  el.style.background=a.color||'#60a5fa';
+  el.dataset.id=a.id;
+  el.tabIndex=0;
+  const titleDiv=document.createElement('div'); titleDiv.className='title'; titleDiv.textContent=a.title||'';
+  const descDiv=document.createElement('div'); descDiv.className='desc'; descDiv.innerHTML=`${escapeHtml(a.start)} - ${escapeHtml(a.end)}${a.desc?'<br>'+escapeHtml(a.desc):''}`;
+  el.appendChild(titleDiv);
+  if(heightPx>=58) el.appendChild(descDiv);
+  el.title=`${a.title} — ${a.start}-${a.end}${a.desc?'\n'+a.desc:''}`;
+  el.addEventListener('click', ev=>{ ev.stopPropagation(); startEdit(a.id); });
+  col.appendChild(el);
 }
-window.onload=init;
-window.onresize=renderAll;
+
+/* =========================
+   CRUD
+   ========================= */
+function addActivity(){ const a=collectForm(); if(!a) return; a.id=Date.now().toString(36); activities.push(a); renderAll(); resetForm(); }
+function updateActivity(){ if(!editingId) return; const a=collectForm(); if(!a) return; a.id=editingId; const idx=activities.findIndex(x=>x.id===editingId); if(idx>=0) activities[idx]=a; renderAll(); resetForm(); }
+function deleteActivity(){ if(!editingId) return; activities=activities.filter(a=>a.id!==editingId); renderAll(); resetForm(); }
+function startEdit(id){ const a=activities.find(x=>x.id===id); if(!a) return; editingId=id; inputTitle.value=a.title; inputDesc.value=a.desc; inputStart.value=a.start; inputEnd.value=a.end; inputColor.value=a.color; inputDay.value=a.day; btnAdd.style.display='none'; btnUpdate.style.display='inline-block'; btnDelete.style.display='inline-block'; }
+
+/* =========================
+   Listeners
+   ========================= */
+btnAdd.addEventListener('click', addActivity);
+btnUpdate.addEventListener('click', updateActivity);
+btnDelete.addEventListener('click', deleteActivity);
+btnReset.addEventListener('click', resetForm);
+btnPrint.addEventListener('click', ()=>window.print());
+btnExport.addEventListener('click', ()=>{
+  const dataStr="data:text/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(activities,null,2));
+  const a=document.createElement('a'); a.href=dataStr; a.download='actividades.json'; a.click();
+});
+btnImport.addEventListener('click', ()=>fileInput.click());
+fileInput.addEventListener('change', e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{ try{ activities=JSON.parse(ev.target.result); renderAll(); }catch(err){alert('JSON inválido')} };
+  reader.readAsText(f);
+});
+
+renderAll();
 </script>
 </body>
 </html>
