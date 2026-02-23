@@ -1,337 +1,239 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Calendario Campamento - Semana Santa 2026</title>
-  <style>
-    :root{
-      --bg:#f4fbf6;
-      --card:#ffffff;
-      --accent:#2f855a;
-      --muted:#6b7280;
-      --hour-height:60px; /* px por hora */
-      --start-hour:8;
-      --end-hour:23;
-    }
-    *{box-sizing:border-box;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial}
-    body{margin:0;background:var(--bg);color:#0f172a;padding:18px}
-    header{display:flex;align-items:center;justify-content:space-between;gap:12px}
-    h1{margin:0;font-size:20px}
-    .wrap{display:grid;grid-template-columns:360px 1fr;gap:18px;margin-top:16px}
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Calendario Campamento - Semana Santa 2026</title>
+<style>
+:root{
+  --bg:#f4fbf6;
+  --card:#ffffff;
+  --accent:#2f855a;
+  --muted:#6b7280;
+  --hour-height:60px;
+  --start-hour:8;
+  --end-hour:23;
+}
+*{box-sizing:border-box;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial}
+body{margin:0;background:var(--bg);color:#0f172a;padding:18px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+h1{margin:0;font-size:20px}
+.wrap{display:grid;grid-template-columns:360px 1fr;gap:18px;margin-top:16px}
 
-    /* panel */
-    .panel{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,0.06)}
-    label{display:block;font-size:13px;color:var(--muted);margin-top:8px}
-    input[type=text], textarea, select, input[type=time]{width:100%;padding:8px;border-radius:8px;border:1px solid #e6edf3;margin-top:6px}
-    textarea{min-height:80px;resize:vertical}
-    .row{display:flex;gap:8px}
-    .btn{display:inline-block;padding:8px 12px;border-radius:8px;border:none;cursor:pointer}
-    .btn-primary{background:var(--accent);color:white}
-    .btn-ghost{background:transparent;border:1px solid #e6edf3}
-    .small{font-size:13px}
-    .muted{color:var(--muted);font-size:13px}
+/* panel */
+.panel{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,0.06)}
+label{display:block;font-size:13px;color:var(--muted);margin-top:8px}
+input[type=text], textarea, select, input[type=time]{width:100%;padding:8px;border-radius:8px;border:1px solid #e6edf3;margin-top:6px}
+textarea{min-height:80px;resize:vertical}
+.row{display:flex;gap:8px}
+.btn{display:inline-block;padding:8px 12px;border-radius:8px;border:none;cursor:pointer}
+.btn-primary{background:var(--accent);color:white}
+.btn-ghost{background:transparent;border:1px solid #e6edf3}
+.small{font-size:13px}
+.muted{color:var(--muted);font-size:13px}
 
-    /* calendario */
-    .calendar{background:transparent}
-    .calendar-grid{display:grid;grid-template-columns:80px repeat(4,1fr);gap:6px}
-    .col-header{height:44px;display:flex;align-items:center;justify-content:center;font-weight:600;background:linear-gradient(90deg, rgba(47,133,90,0.08), rgba(47,133,90,0.02));border-radius:8px}
-    .hour-col{display:flex;flex-direction:column}
-    .hour-label{height:var(--hour-height);text-align:right;padding-right:10px;padding-top:8px;color:var(--muted);font-size:13px}
-    .day-column{background:var(--card);border-radius:8px;padding:0;position:relative;overflow:hidden;min-height:calc((var(--end-hour) - var(--start-hour)) * var(--hour-height));height:calc((var(--end-hour) - var(--start-hour)) * var(--hour-height));box-shadow:0 4px 14px rgba(2,6,23,0.04)}
-    .hour-line{height:var(--hour-height);border-bottom:1px dashed #eef2f6}
+/* calendario */
+.calendar{background:transparent}
+.calendar-grid{display:grid;grid-template-columns:80px repeat(4,1fr);gap:6px}
+.col-header{height:44px;display:flex;align-items:center;justify-content:center;font-weight:600;background:linear-gradient(90deg, rgba(47,133,90,0.08), rgba(47,133,90,0.02));border-radius:8px}
+.hour-col{display:flex;flex-direction:column}
+.hour-label{height:var(--hour-height);text-align:right;padding-right:10px;padding-top:8px;color:var(--muted);font-size:13px}
+.day-column{background:var(--card);border-radius:8px;padding:0;position:relative;overflow:hidden;min-height:calc((var(--end-hour) - var(--start-hour)) * var(--hour-height));height:calc((var(--end-hour) - var(--start-hour)) * var(--hour-height));box-shadow:0 4px 14px rgba(2,6,23,0.04)}
+.hour-line{height:var(--hour-height);border-bottom:1px dashed #eef2f6}
+.activity{
+  position:absolute;
+  border-radius:8px;
+  padding:8px;
+  color:#fff;
+  box-shadow:0 6px 12px rgba(2,6,23,0.12);
+  font-size:13px;
+  cursor:pointer;
+  overflow:hidden;
+  line-height:1.2;
+  z-index:5;
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  min-width:48px;
+}
+.activity .title{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.activity .desc{font-size:12px;opacity:0.95;white-space:normal;overflow:hidden;text-overflow:clip;margin-top:4px;line-height:1.2}
 
-    .activity{
-      position:absolute;
-      border-radius:8px;
-      padding:8px;
-      color:#fff;
-      box-shadow:0 6px 12px rgba(2,6,23,0.12);
-      font-size:13px;
-      cursor:pointer;
-      overflow:hidden;
-      line-height:1.2;
-      z-index:5;
-      box-sizing:border-box;
-      display:flex;
-      flex-direction:column;
-      justify-content:center;
-      min-width:48px;
-    }
-    .activity .title{
-      font-weight:700;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-    .activity .desc{
-      font-size:12px;
-      opacity:0.95;
-      white-space:normal;
-      overflow:hidden;
-      text-overflow:clip;
-      margin-top:4px;
-      line-height:1.2;
-    }
-
-    /* móvil vertical */
-    @media (max-width: 420px){
-      .calendar-grid{display:block}
-      .day-block{margin-bottom:16px;background:var(--card);border-radius:8px;box-shadow:0 4px 14px rgba(2,6,23,0.04);}
-      .day-header{padding:6px 12px;font-weight:600;border-bottom:1px solid #eef2f6;}
-      .day-inner{display:flex}
-      .hours-side{width:50px;flex-shrink:0;border-right:1px solid #eef2f6}
-      .day-column-mobile{flex:1;position:relative}
-      .hour-label{padding-left:4px;text-align:left;font-size:12px;color:#6b7280}
-    }
-  </style>
+/* móvil vertical */
+@media (max-width: 420px){
+  .calendar-grid{display:block}
+  .day-block{margin-bottom:16px;background:var(--card);border-radius:8px;box-shadow:0 4px 14px rgba(2,6,23,0.04);}
+  .day-header{padding:6px 12px;font-weight:600;border-bottom:1px solid #eef2f6;}
+  .day-inner{display:flex}
+  .hours-side{width:50px;flex-shrink:0;border-right:1px solid #eef2f6}
+  .day-column-mobile{flex:1;position:relative}
+  .hour-label{padding-left:4px;text-align:left;font-size:12px;color:#6b7280}
+}
+</style>
 </head>
 <body>
-  <header>
-    <div>
-      <h1>📅 Calendario - Campamento Semana Santa 2026</h1>
-      <div class="muted">Viernes 27 — Lunes 30 de marzo</div>
-    </div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <button id="btnPrint" class="btn btn-ghost small" aria-label="Imprimir">Imprimir / Guardar PDF</button>
-      <button id="btnExport" class="btn btn-ghost small" aria-label="Exportar JSON">Descargar JSON</button>
-      <button id="btnImport" class="btn btn-ghost small" aria-label="Importar JSON">Importar JSON</button>
-    </div>
-  </header>
+<header>
+  <div>
+    <h1>📅 Calendario - Campamento Semana Santa 2026</h1>
+    <div class="muted">Viernes 27 — Lunes 30 de marzo</div>
+  </div>
+</header>
 
-  <div class="wrap">
-    <div class="panel">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <strong>Crear / Editar actividad</strong>
-        <button id="btnReset" class="btn btn-ghost small">Limpiar</button>
-      </div>
-
-      <label>Día</label>
-      <select id="inputDay">
-        <option>Viernes 27</option>
-        <option>Sábado 28</option>
-        <option>Domingo 29</option>
-        <option>Lunes 30</option>
-      </select>
-
-      <div class="row">
-        <div style="flex:1">
-          <label>Inicio</label>
-          <input id="inputStart" type="time" value="08:00" />
-        </div>
-        <div style="flex:1">
-          <label>Fin</label>
-          <input id="inputEnd" type="time" value="09:00" />
-        </div>
-      </div>
-
-      <label>Nombre</label>
-      <input id="inputTitle" type="text" placeholder="Ej. Ruta por la sierra" />
-
-      <label>Descripción</label>
-      <textarea id="inputDesc" placeholder="Detalles, materiales, quién dirige..."></textarea>
-
-      <label>Color</label>
-      <input id="inputColor" type="color" value="#60a5fa" />
-
-      <div class="controls">
-        <button id="btnAdd" class="btn btn-primary">Añadir actividad</button>
-        <button id="btnUpdate" class="btn btn-ghost" style="display:none">Guardar cambios</button>
-        <button id="btnDelete" class="btn btn-ghost" style="display:none">Borrar</button>
-      </div>
-
-      <div class="footer">Las actividades se guardan automáticamente en este equipo (localStorage). Puedes descargar el JSON para compartir o importar en otro equipo.</div>
+<div class="wrap">
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <strong>Crear / Editar actividad</strong>
+      <button id="btnReset" class="btn btn-ghost small">Limpiar</button>
     </div>
 
-    <div class="calendar panel">
-      <div class="calendar-grid" id="calendarGrid"></div>
+    <label>Día</label>
+    <select id="inputDay">
+      <option>Viernes 27</option>
+      <option>Sábado 28</option>
+      <option>Domingo 29</option>
+      <option>Lunes 30</option>
+    </select>
+
+    <div class="row">
+      <div style="flex:1">
+        <label>Inicio</label>
+        <input id="inputStart" type="time" value="08:00" />
+      </div>
+      <div style="flex:1">
+        <label>Fin</label>
+        <input id="inputEnd" type="time" value="09:00" />
+      </div>
+    </div>
+
+    <label>Nombre</label>
+    <input id="inputTitle" type="text" placeholder="Ej. Ruta por la sierra" />
+
+    <label>Descripción</label>
+    <textarea id="inputDesc" placeholder="Detalles, materiales, quién dirige..."></textarea>
+
+    <label>Color</label>
+    <input id="inputColor" type="color" value="#60a5fa" />
+
+    <div class="controls">
+      <button id="btnAdd" class="btn btn-primary">Añadir actividad</button>
+      <button id="btnUpdate" class="btn btn-ghost" style="display:none">Guardar cambios</button>
+      <button id="btnDelete" class="btn btn-ghost" style="display:none">Borrar</button>
     </div>
   </div>
 
-  <input id="fileInput" type="file" accept="application/json" style="display:none" />
+  <div class="calendar panel">
+    <div class="calendar-grid" id="calendarGrid"></div>
+  </div>
+</div>
 
-  <script>
-    const DAYS = ["Viernes 27","Sábado 28","Domingo 29","Lunes 30"];
-    let HOUR_H = 60;
+<script>
+const DAYS=["Viernes 27","Sábado 28","Domingo 29","Lunes 30"];
+let HOUR_H=60;
+const inputDay=document.getElementById('inputDay');
+const inputStart=document.getElementById('inputStart');
+const inputEnd=document.getElementById('inputEnd');
+const inputTitle=document.getElementById('inputTitle');
+const inputDesc=document.getElementById('inputDesc');
+const inputColor=document.getElementById('inputColor');
+const btnAdd=document.getElementById('btnAdd');
+const btnUpdate=document.getElementById('btnUpdate');
+const btnDelete=document.getElementById('btnDelete');
+const btnReset=document.getElementById('btnReset');
+const calendarGrid=document.getElementById('calendarGrid');
 
-    const inputDay = document.getElementById('inputDay');
-    const inputStart = document.getElementById('inputStart');
-    const inputEnd = document.getElementById('inputEnd');
-    const inputTitle = document.getElementById('inputTitle');
-    const inputDesc = document.getElementById('inputDesc');
-    const inputColor = document.getElementById('inputColor');
-    const btnAdd = document.getElementById('btnAdd');
-    const btnUpdate = document.getElementById('btnUpdate');
-    const btnDelete = document.getElementById('btnDelete');
-    const btnReset = document.getElementById('btnReset');
-    const btnPrint = document.getElementById('btnPrint');
-    const btnExport = document.getElementById('btnExport');
-    const btnImport = document.getElementById('btnImport');
-    const fileInput = document.getElementById('fileInput');
-    const calendarGrid = document.getElementById('calendarGrid');
+let activities=[];
+const STORAGE_KEY='campamento-semanasanta-2026';
+let editingId=null;
 
-    let activities = [];
-    const STORAGE_KEY = 'campamento-semanasanta-2026';
-    let editingId = null;
+function timeToMinutes(t){const [hh,mm]=String(t||'').split(':').map(Number); return hh*60+mm;}
+function escapeHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 
-    function timeToMinutes(t){
-      const [hh,mm] = String(t||'').split(':').map(Number);
-      if(isNaN(hh) || isNaN(mm)) return 0;
-      return hh*60 + mm;
+function load(){const raw=localStorage.getItem(STORAGE_KEY); if(raw) try{activities=JSON.parse(raw)||[]}catch(e){activities=[]} buildCalendar(); renderAll();}
+function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(activities));}
+
+let dayCols=[];
+function buildCalendar(){
+  let minHour=8,maxHour=23;
+  if(activities.length>0){
+    const starts=activities.map(a=>Math.floor(timeToMinutes(a.start)/60));
+    const ends=activities.map(a=>Math.ceil(timeToMinutes(a.end)/60));
+    minHour=Math.max(0,Math.min(minHour,Math.min(...starts)));
+    maxHour=Math.min(24,Math.max(maxHour,Math.max(...ends)));
+  }
+  document.documentElement.style.setProperty('--start-hour',String(minHour));
+  document.documentElement.style.setProperty('--end-hour',String(maxHour));
+  const isNarrow=window.innerWidth<=420;
+  calendarGrid.innerHTML='';
+  if(!isNarrow){
+    calendarGrid.style.display='grid';
+    calendarGrid.style.gridTemplateColumns=`80px repeat(${DAYS.length},1fr)`;
+    const hoursCol=document.createElement('div'); hoursCol.className='hour-col';
+    for(let hh=minHour; hh<maxHour; hh++){
+      const lab=document.createElement('div'); lab.className='hour-label'; lab.textContent=String(hh).padStart(2,'0')+':00';
+      hoursCol.appendChild(lab);
     }
+    calendarGrid.appendChild(hoursCol);
+    DAYS.forEach(d=>{
+      const col=document.createElement('div'); col.className='day-column'; col.dataset.day=d;
+      for(let hh=minHour; hh<maxHour; hh++){const line=document.createElement('div'); line.className='hour-line'; col.appendChild(line);}
+      calendarGrid.appendChild(col);
+    });
+    dayCols=Array.from(document.querySelectorAll('.day-column'));
+  }else{
+    DAYS.forEach(d=>{
+      const block=document.createElement('div'); block.className='day-block';
+      const header=document.createElement('div'); header.className='day-header'; header.textContent=d;
+      block.appendChild(header);
+      const inner=document.createElement('div'); inner.className='day-inner';
+      const hoursSide=document.createElement('div'); hoursSide.className='hours-side';
+      for(let hh=minHour; hh<maxHour; hh++){const lab=document.createElement('div'); lab.className='hour-label'; lab.textContent=String(hh).padStart(2,'0')+':00'; hoursSide.appendChild(lab);}
+      inner.appendChild(hoursSide);
+      const col=document.createElement('div'); col.className='day-column-mobile'; col.dataset.day=d;
+      for(let hh=minHour; hh<maxHour; hh++){const line=document.createElement('div'); line.className='hour-line'; col.appendChild(line);}
+      inner.appendChild(col);
+      block.appendChild(inner);
+      calendarGrid.appendChild(block);
+    });
+    dayCols=Array.from(document.querySelectorAll('.day-column-mobile'));
+  }
+}
 
-    function escapeHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-
-    function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
-
-    function load(){
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if(raw) try{activities = JSON.parse(raw) || [];}catch(e){activities=[]}
-      buildCalendarLayout();
-      renderAll();
-    }
-
-    function save(){
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(activities));
-    }
-
-    function renderAll(){
-      dayCols.forEach(c=>Array.from(c.querySelectorAll('.activity')).forEach(n=>n.remove()));
-      DAYS.forEach(day=>{
-        const acts = activities.filter(a=>a.day===day).map(a=>({...a,_startMin:timeToMinutes(a.start),_endMin:timeToMinutes(a.end)})).sort((a,b)=>a._startMin - b._startMin);
-        const layouted = computeLayoutForDay(acts);
-        layouted.forEach(a=>renderActivity(a));
-      });
-    }
-
-    function computeLayoutForDay(items){
-      const columns = [];
-      items.forEach(item=>{
-        let placed=false;
-        for(let i=0;i<columns.length;i++){
-          const last = columns[i][columns[i].length -1];
-          if(!last || last._endMin <= item._startMin){
-            columns[i].push(item); item._col=i; placed=true; break;
-          }
-        }
-        if(!placed){columns.push([item]); item._col=columns.length-1;}
-      });
-      items.forEach(item=>{
-        const overlappingCols = [];
-        for(let ci=0;ci<columns.length;ci++){
-          if(columns[ci].some(it=>!(it._endMin <= item._startMin || it._startMin >= item._endMin))) overlappingCols.push(ci);
-        }
-        item._totalCols = overlappingCols.length || 1;
-        item._colIndex = overlappingCols.indexOf(item._col);
-        if(item._colIndex<0) item._colIndex=0;
-      });
-      return items;
-    }
-
-    let dayCols = [];
-
-    function renderActivity(a){
-      const col = dayCols.find(c=>c.dataset.day===a.day); if(!col) return;
-      const startMin = a._startMin ?? timeToMinutes(a.start);
-      const endMin = a._endMin ?? timeToMinutes(a.end);
-      const topPx = ((startMin - parseInt(getComputedStyle(document.documentElement).getPropertyValue('--start-hour'))*60)/60)*HOUR_H;
-      const heightPx = ((endMin-startMin)/60)*HOUR_H;
-      const el = document.createElement('div'); el.className='activity';
-      el.style.top = topPx + 'px';
-      el.style.height = Math.max(40,heightPx-6)+'px';
-      const cols = (a._totalCols && a._totalCols>0)?a._totalCols:1;
-      const idx = (typeof a._colIndex==='number')?a._colIndex:0;
-      el.style.left = `${(idx/cols)*100}%`;
-      el.style.width = `calc(${100/cols}% - 8px)`;
-      el.style.background = a.color || '#60a5fa';
+function renderAll(){
+  dayCols.forEach(c=>Array.from(c.querySelectorAll('.activity')).forEach(n=>n.remove()));
+  DAYS.forEach(day=>{
+    const acts=activities.filter(a=>a.day===day).map(a=>({...a,_startMin:timeToMinutes(a.start),_endMin:timeToMinutes(a.end)})).sort((a,b)=>a._startMin-b._startMin);
+    acts.forEach(a=>{
+      const col=dayCols.find(c=>c.dataset.day===a.day); if(!col)return;
+      const topPx=((a._startMin-parseInt(getComputedStyle(document.documentElement).getPropertyValue('--start-hour'))*60)/60)*HOUR_H;
+      const heightPx=((a._endMin-a._startMin)/60)*HOUR_H;
+      const el=document.createElement('div'); el.className='activity';
+      el.style.top=topPx+'px';
+      el.style.height=Math.max(40,heightPx-6)+'px';
+      el.style.left='0%'; el.style.width='100%';
+      el.style.background=a.color||'#60a5fa';
       el.dataset.id=a.id;
-      el.tabIndex=0;
-      el.setAttribute('role','button');
-      el.setAttribute('aria-label',`${a.title} ${a.start} a ${a.end}`);
       el.innerHTML=`<div class="title">${escapeHtml(a.title)}</div><div class="desc">${escapeHtml(a.start)} - ${escapeHtml(a.end)}${a.desc?'<br>'+escapeHtml(a.desc):''}</div>`;
-      el.title = `${a.title} — ${a.start} - ${a.end}${a.desc? '\n'+a.desc : ''}`;
-      el.addEventListener('click',ev=>{ev.stopPropagation(); startEdit(a.id);});
-      el.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault(); startEdit(a.id);}});
+      el.addEventListener('click',()=>startEdit(a.id));
       col.appendChild(el);
-    }
+    });
+  });
+}
 
-    function resetForm(){inputTitle.value='';inputDesc.value='';inputColor.value='#60a5fa';inputStart.value='08:00';inputEnd.value='09:00';inputDay.value=DAYS[0];editingId=null;btnAdd.style.display='inline-block';btnUpdate.style.display='none';btnDelete.style.display='none';inputTitle.focus();}
-    function collectForm(){const title=inputTitle.value.trim(); if(!title){alert('Pon un nombre a la actividad'); inputTitle.focus(); return null} const start=inputStart.value; const end=inputEnd.value; if(!start||!end){alert('Pon hora de inicio y fin');return null} if(timeToMinutes(end)<=timeToMinutes(start)){alert('La hora de fin debe ser posterior al inicio');return null} return {day:inputDay.value,start,end,title,desc:inputDesc.value.trim(),color:inputColor.value};}
-    function addActivity(){const a=collectForm(); if(!a) return; a.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6); activities.push(a); save(); buildCalendarLayout(); renderAll(); resetForm();}
-    function startEdit(id){const a=activities.find(x=>x.id===id); if(!a)return; editingId=id; inputDay.value=a.day; inputStart.value=a.start; inputEnd.value=a.end; inputTitle.value=a.title; inputDesc.value=a.desc||''; inputColor.value=a.color||'#60a5fa'; btnAdd.style.display='none'; btnUpdate.style.display='inline-block'; btnDelete.style.display='inline-block'; window.scrollTo({top:0,behavior:'smooth'}); inputTitle.focus();}
-    function updateActivity(){if(!editingId) return; const idx=activities.findIndex(x=>x.id===editingId); if(idx<0)return; const a=collectForm(); if(!a)return; a.id=editingId; activities[idx]=a; save(); buildCalendarLayout(); renderAll(); resetForm();}
-    function deleteActivity(){if(!editingId)return; if(!confirm('¿Borrar esta actividad?')) return; activities=activities.filter(x=>x.id!==editingId); save(); buildCalendarLayout(); renderAll(); resetForm();}
+function resetForm(){inputTitle.value='';inputDesc.value='';inputColor.value='#60a5fa';inputStart.value='08:00';inputEnd.value='09:00';inputDay.value=DAYS[0];editingId=null;btnAdd.style.display='inline-block';btnUpdate.style.display='none';btnDelete.style.display='none';}
+function collectForm(){const title=inputTitle.value.trim(); if(!title){alert('Pon un nombre a la actividad'); inputTitle.focus(); return null} const start=inputStart.value; const end=inputEnd.value; if(!start||!end){alert('Pon hora de inicio y fin');return null} if(timeToMinutes(end)<=timeToMinutes(start)){alert('La hora de fin debe ser posterior al inicio');return null} return {day:inputDay.value,start,end,title,desc:inputDesc.value.trim(),color:inputColor.value};}
+function addActivity(){const a=collectForm(); if(!a) return; a.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6); activities.push(a); save(); buildCalendar(); renderAll(); resetForm();}
+function startEdit(id){const a=activities.find(x=>x.id===id); if(!a)return; editingId=id; inputDay.value=a.day; inputStart.value=a.start; inputEnd.value=a.end; inputTitle.value=a.title; inputDesc.value=a.desc||''; inputColor.value=a.color||'#60a5fa'; btnAdd.style.display='none'; btnUpdate.style.display='inline-block'; btnDelete.style.display='inline-block';}
+function updateActivity(){if(!editingId)return; const idx=activities.findIndex(x=>x.id===editingId); if(idx<0)return; const a=collectForm(); if(!a)return; a.id=editingId; activities[idx]=a; save(); buildCalendar(); renderAll(); resetForm();}
+function deleteActivity(){if(!editingId)return; if(!confirm('¿Borrar esta actividad?'))return; activities=activities.filter(x=>x.id!==editingId); save(); buildCalendar(); renderAll(); resetForm();}
 
-    btnAdd.addEventListener('click',addActivity);
-    btnUpdate.addEventListener('click',updateActivity);
-    btnDelete.addEventListener('click',deleteActivity);
-    btnReset.addEventListener('click',resetForm);
-    btnPrint.addEventListener('click',()=>{window.print();});
-    btnExport.addEventListener('click',()=>{const dataStr=JSON.stringify(activities,null,2); const blob=new Blob([dataStr],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='campamento-planning.json'; a.click(); URL.revokeObjectURL(url);});
-    btnImport.addEventListener('click',()=>{fileInput.click();});
-    fileInput.addEventListener('change',(e)=>{const f=e.target.files[0]; if(!f)return; const reader=new FileReader(); reader.onload=()=>{try{const parsed=JSON.parse(reader.result); if(Array.isArray(parsed)&&parsed.every(it=> it && typeof it.day==='string' && typeof it.start==='string' && typeof it.end==='string' && typeof it.title==='string')){if(confirm('¿Reemplazar las actividades locales con las del archivo? Pulsa CANCELAR para MERGEAR')){activities=parsed; save(); buildCalendarLayout(); renderAll();}else{activities=activities.concat(parsed); save(); buildCalendarLayout(); renderAll();} alert('Importado ✔');}else alert('JSON no válido');}catch(err){alert('Error al leer JSON'); console.error(err)}}; reader.readAsText(f); e.target.value='';});
-
-    let dayCols=[];
-
-    function buildCalendarLayout(){
-      let minHour=8,maxHour=23;
-      if(activities.length>0){
-        const starts=activities.map(a=>Math.floor(timeToMinutes(a.start)/60));
-        const ends=activities.map(a=>Math.ceil(timeToMinutes(a.end)/60));
-        minHour=Math.max(0,Math.min(23,Math.min(minHour,Math.min(...starts))));
-        maxHour=Math.max(1,Math.min(24,Math.max(maxHour,Math.max(...ends))));
-      }
-      document.documentElement.style.setProperty('--start-hour',String(minHour));
-      document.documentElement.style.setProperty('--end-hour',String(maxHour));
-      const isNarrow=window.innerWidth<=420;
-      calendarGrid.innerHTML='';
-      if(!isNarrow){
-        const empty=document.createElement('div'); calendarGrid.appendChild(empty);
-        for(const d of DAYS){const h=document.createElement('div'); h.className='col-header'; h.textContent=d; calendarGrid.appendChild(h);}
-        const hoursCol=document.createElement('div'); hoursCol.className='hour-col';
-        for(let hh=minHour; hh<maxHour; hh++){const lab=document.createElement('div'); lab.className='hour-label'; lab.textContent=String(hh).padStart(2,'0')+':00'; hoursCol.appendChild(lab);}
-        calendarGrid.appendChild(hoursCol);
-        for(const d of DAYS){const col=document.createElement('div'); col.className='day-column'; col.dataset.day=d; for(let hh=minHour; hh<maxHour; hh++){const line=document.createElement('div'); line.className='hour-line'; col.appendChild(line);} calendarGrid.appendChild(col);}
-        dayCols=Array.from(document.querySelectorAll('.day-column'));
-      }else{
-        for(const d of DAYS){
-          const block=document.createElement('div'); block.className='day-block';
-          const header=document.createElement('div'); header.className='day-header'; header.textContent=d; block.appendChild(header);
-          const inner=document.createElement('div'); inner.className='day-inner';
-          const hoursSide=document.createElement('div'); hoursSide.className='hours-side';
-          for(let hh=minHour; hh<maxHour; hh++){const lab=document.createElement('div'); lab.className='hour-label'; lab.textContent=String(hh).padStart(2,'0')+':00'; hoursSide.appendChild(lab);}
-          inner.appendChild(hoursSide);
-          const col=document.createElement('div'); col.className='day-column-mobile'; col.dataset.day=d;
-          for(let hh=minHour; hh<maxHour; hh++){const line=document.createElement('div'); line.className='hour-line'; col.appendChild(line);}
-          inner.appendChild(col);
-          block.appendChild(inner);
-          calendarGrid.appendChild(block);
-        }
-        dayCols=Array.from(document.querySelectorAll('.day-column-mobile'));
-      }
-      dayCols.forEach(col=>{
-        col.onclick=null;
-        col.addEventListener('click',(ev)=>{
-          if(ev.target.closest('.activity')) return;
-          const rect=col.getBoundingClientRect();
-          const y=ev.clientY-rect.top;
-          const minH=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--start-hour'))||8;
-          const minutes=minH*60+(y/HOUR_H)*60;
-          let hh=Math.floor(minutes/60);
-          let mm=Math.round((minutes%60)/15)*15; if(mm===60){hh+=1; mm=0;}
-          inputDay.value=col.dataset.day;
-          inputStart.value=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
-          let endMin=minutes+60; let endH=Math.floor(endMin/60); let endM=Math.round((endMin%60)/15)*15; if(endM===60){endH+=1; endM=0;} if(endH>=24){endH=23; endM=59;}
-          inputEnd.value=String(endH).padStart(2,'0')+':'+String(endM).padStart(2,'0');
-          window.scrollTo({top:0,behavior:'smooth'});
-          inputTitle.focus();
-        });
-      });
-    }
-
-    window.addEventListener('resize',()=>{buildCalendarLayout(); renderAll();});
-
-    load();
-  </script>
+btnAdd.addEventListener('click',addActivity);
+btnUpdate.addEventListener('click',updateActivity);
+btnDelete.addEventListener('click',deleteActivity);
+btnReset.addEventListener('click',resetForm);
+window.addEventListener('resize',()=>{buildCalendar(); renderAll();});
+load();
+</script>
 </body>
 </html>
