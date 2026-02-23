@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Calendario Campamento - Semana Santa 2026</title>
 
-<!-- Firebase (v8) - se usan si pegas tu config más abajo -->
+<!-- Firebase (v8) -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
@@ -38,7 +38,7 @@ textarea{min-height:80px;resize:vertical}
 .small{font-size:13px}
 .muted{color:var(--muted);font-size:13px}
 
-/* calendario */
+/* calendario - desktop */
 .calendar{background:transparent}
 .calendar-grid{display:grid;grid-template-columns:80px repeat(4,1fr);gap:8px;align-items:start}
 .col-header{height:44px;display:flex;align-items:center;justify-content:center;font-weight:600;background:linear-gradient(90deg, rgba(47,133,90,0.08), rgba(47,133,90,0.02));border-radius:8px;padding:6px}
@@ -70,9 +70,6 @@ textarea{min-height:80px;resize:vertical}
 .activity .title{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .activity .desc{font-size:12px;opacity:0.95;white-space:normal;overflow:hidden;margin-top:6px;line-height:1.2}
 
-/* tiny status */
-#syncStatus{font-size:12px;color:var(--muted)}
-
 /* MOBILE: mobile-first tweaks */
 @media (max-width:900px){
   body{padding:8px}
@@ -92,13 +89,46 @@ textarea{min-height:80px;resize:vertical}
   .btn{padding:10px 12px;font-size:15px}
 }
 
-/* VERY NARROW: list fallback (one-column per day stacked) */
+/* MOBILE VERTICAL: stacked day view */
 @media (max-width:420px){
-  /* Instead of trying to fit 4 days horizontally, show stacked day summaries under calendar */
-  .calendar-grid{grid-template-columns:1fr}
-  .day-column{min-height:200px;height:auto;padding:10px}
-  .hour-col{display:none}
+  /* override: calendar-grid becomes single column container for blocks we will insert */
+  .calendar-grid{
+    display:block;
+    padding:6px;
+    gap:8px;
+  }
+  .day-block{
+    display:block;
+    margin-bottom:12px;
+    background:transparent;
+  }
+  .day-block .day-inner{
+    display:flex;
+    gap:8px;
+  }
+  .day-block .hours-side{
+    width:68px;
+    background:transparent;
+    border-radius:8px;
+    padding:6px;
+    box-sizing:border-box;
+  }
+  .day-block .hours-side .hour-label{height:40px;padding-top:10px;font-size:12px;text-align:left;padding-left:6px;color:var(--muted)}
+  .day-block .day-column-mobile{
+    flex:1;
+    background:var(--card);
+    border-radius:8px;
+    position:relative;
+    min-height:320px;
+    height:auto;
+    box-shadow:0 4px 14px rgba(2,6,23,0.04);
+    overflow:hidden;
+  }
+  .day-block .day-header{font-weight:700;margin-bottom:6px}
+  .hour-line{border-bottom:1px dashed #eef2f6;height:40px}
 }
+
+#syncStatus{font-size:12px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -160,17 +190,7 @@ textarea{min-height:80px;resize:vertical}
 
   <div class="calendar panel">
     <div class="calendar-grid" id="calendarGrid">
-      <div></div>
-      <div class="col-header">Viernes 27</div>
-      <div class="col-header">Sábado 28</div>
-      <div class="col-header">Domingo 29</div>
-      <div class="col-header">Lunes 30</div>
-
-      <div class="hour-col" id="hoursCol"></div>
-      <div class="day-column" data-day="Viernes 27"></div>
-      <div class="day-column" data-day="Sábado 28"></div>
-      <div class="day-column" data-day="Domingo 29"></div>
-      <div class="day-column" data-day="Lunes 30"></div>
+      <!-- El layout se genera dinámicamente: (desktop = 1 columna horas + 4 días) | (mobile vertical = day-blocks apilados) -->
     </div>
   </div>
 </div>
@@ -179,8 +199,7 @@ textarea{min-height:80px;resize:vertical}
 
 <script>
 /* =======================
-   Configuración: pega tu firebaseConfig aquí si quieres sincronizar
-   Si NO pegas nada, la página funcionará solo en localStorage.
+   Configuración Firebase (ya pegada)
    ======================= */
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyAhzhr7P7m1CDYZhQPwtP78OEm6jGwwDGE",
@@ -191,7 +210,7 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "483863490995",
   appId: "1:483863490995:web:5474b5a0984553baf29bc6"
 };
-let REMOTE_ENABLED = true; // se activará si config válida
+let REMOTE_ENABLED = true;
 
 /* =======================
    Variables UI y tiempo
@@ -201,24 +220,14 @@ const START_H=parseInt(getComputedStyle(document.documentElement).getPropertyVal
 const END_H=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--end-hour'))||23;
 const HOUR_H=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--hour-height'))||60;
 
-const hoursCol=document.getElementById('hoursCol');
-const dayCols=Array.from(document.querySelectorAll('.day-column'));
+const calendarGrid = document.getElementById('calendarGrid');
 const syncStatusEl = document.getElementById('syncStatus');
 
-/* crear filas de horas */
-for(let h=START_H; h<END_H; h++){
-  const lab=document.createElement('div'); lab.className='hour-label'; lab.textContent=String(h).padStart(2,'0')+":00";
-  hoursCol.appendChild(lab);
-  dayCols.forEach(c=>{ const line=document.createElement('div'); line.className='hour-line'; c.appendChild(line); });
-}
-
-/* utilidades */
-const timeToMinutes=t=>{ const [hh,mm]=String(t||'').split(':').map(Number); return Number.isNaN(hh)||Number.isNaN(mm)?0:hh*60+mm; };
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const STORAGE_KEY = 'campamento-semanasanta-2026';
 let activities = [];
+let dayCols = []; // columnas activas (selector actualizado según layout)
 
-/* elementos formulario */
+/* elementos form */
 const inputDay=document.getElementById('inputDay');
 const inputStart=document.getElementById('inputStart');
 const inputEnd=document.getElementById('inputEnd');
@@ -237,38 +246,34 @@ const fileInput=document.getElementById('fileInput');
 let editingId = null;
 
 /* =======================
-   Código Firebase (si pegas config)
+   Firebase init (if configured)
    ======================= */
 let dbRef = null;
 let remoteLoaded = false;
 
 function initFirebaseIfConfigured(){
   try{
-    // detectar si config tiene propiedades (min 3 keys)
     if(FIREBASE_CONFIG && Object.keys(FIREBASE_CONFIG).length > 2 && typeof firebase !== 'undefined'){
       firebase.initializeApp(FIREBASE_CONFIG);
-      // auth anónimo
-      firebase.auth().signInAnonymously().catch(()=>{/* no crítico */});
+      firebase.auth().signInAnonymously().catch(()=>{/* ok */});
       dbRef = firebase.database().ref('activities');
       REMOTE_ENABLED = true;
       syncStatusEl.textContent = 'Modo: sincronización activa (Firebase)';
       attachFirebaseListeners();
-      console.log('Firebase inicializado: sincronización activada');
+      console.log('Firebase inicializado');
     } else {
       REMOTE_ENABLED = false;
       syncStatusEl.textContent = 'Modo: local (sin Firebase)';
-      console.log('Firebase no configurado. Usando localStorage como fallback.');
     }
   }catch(err){
     REMOTE_ENABLED = false;
     syncStatusEl.textContent = 'Modo: local (error Firebase)';
-    console.warn('Error inicializando Firebase:', err);
+    console.warn('Error Firebase:', err);
   }
 }
 
 function attachFirebaseListeners(){
   if(!dbRef) return;
-  // escuchamos snapshot completo (sencillo). Para optimizar se puede usar child_added/changed/removed.
   dbRef.on('value', snapshot=>{
     const data = snapshot.val() || {};
     activities = Object.keys(data).map(k => ({ id: k, ...data[k] }));
@@ -276,49 +281,123 @@ function attachFirebaseListeners(){
     renderAll();
     remoteLoaded = true;
   });
-  // conexión (opcional) para saber si estamos online
   const connRef = firebase.database().ref('.info/connected');
   connRef.on('value', snap=>{
-    if(snap.val() === true){
-      syncStatusEl.textContent = 'Modo: sincronización activa (Firebase) — conectado';
-    } else {
-      // if disconnected, keep note
-      syncStatusEl.textContent = 'Modo: sincronización activa (Firebase) — desconectado';
-    }
+    if(snap.val() === true){ syncStatusEl.textContent = 'Modo: sincronización activa (Firebase) — conectado'; }
+    else { syncStatusEl.textContent = 'Modo: sincronización activa (Firebase) — desconectado'; }
   });
 }
 
-/* funciones remotas */
-function pushActivityToRemote(a){
-  if(!dbRef) return Promise.reject('No remote');
-  if(a.id){
-    const id=a.id; const copy={...a}; delete copy.id;
-    return dbRef.child(id).set(copy);
+/* =======================
+   Build calendar layout (desktop or mobile stacked)
+   ======================= */
+function buildCalendarLayout(){
+  const isNarrow = window.innerWidth <= 420;
+  // limpamos grid
+  calendarGrid.innerHTML = '';
+
+  if(!isNarrow){
+    // DESKTOP: reconstruir grid: empty cell, 4 headers, hoursCol, day columns
+    // primera fila: empty + headers
+    const empty = document.createElement('div');
+    calendarGrid.appendChild(empty);
+    for(const d of DAYS){
+      const h = document.createElement('div'); h.className='col-header'; h.textContent = d;
+      calendarGrid.appendChild(h);
+    }
+    // segunda fila: hours col + day columns
+    const hoursCol = document.createElement('div'); hoursCol.className = 'hour-col'; hoursCol.id = 'hoursCol';
+    for(let hh=START_H; hh<END_H; hh++){
+      const lab = document.createElement('div'); lab.className='hour-label'; lab.textContent = String(hh).padStart(2,'0')+':00';
+      hoursCol.appendChild(lab);
+    }
+    calendarGrid.appendChild(hoursCol);
+    for(const d of DAYS){
+      const col = document.createElement('div'); col.className='day-column'; col.dataset.day = d;
+      // añadir hour lines para posicionar visualmente
+      for(let hh=START_H; hh<END_H; hh++){
+        const line = document.createElement('div'); line.className='hour-line';
+        col.appendChild(line);
+      }
+      calendarGrid.appendChild(col);
+    }
+    // actualizar dayCols
+    dayCols = Array.from(document.querySelectorAll('.day-column'));
   } else {
-    const newRef = dbRef.push();
-    a.id = newRef.key;
-    const copy={...a}; delete copy.id;
-    return newRef.set(copy);
+    // MOBILE STACKED: para cada día creamos un bloque con header + left hours + right day-column-mobile
+    for(const d of DAYS){
+      const block = document.createElement('div'); block.className = 'day-block';
+      const header = document.createElement('div'); header.className = 'day-header'; header.textContent = d;
+      block.appendChild(header);
+      const inner = document.createElement('div'); inner.className = 'day-inner';
+      // hours side
+      const hoursSide = document.createElement('div'); hoursSide.className = 'hours-side';
+      for(let hh=START_H; hh<END_H; hh++){
+        const lab = document.createElement('div'); lab.className='hour-label'; lab.textContent = String(hh).padStart(2,'0')+':00';
+        hoursSide.appendChild(lab);
+      }
+      inner.appendChild(hoursSide);
+      // day column mobile
+      const col = document.createElement('div'); col.className='day-column-mobile'; col.dataset.day = d;
+      // hour lines
+      for(let hh=START_H; hh<END_H; hh++){
+        const line = document.createElement('div'); line.className='hour-line';
+        col.appendChild(line);
+      }
+      inner.appendChild(col);
+      block.appendChild(inner);
+      calendarGrid.appendChild(block);
+    }
+    // actualizar dayCols para mobile (seleccionamos las .day-column-mobile)
+    dayCols = Array.from(document.querySelectorAll('.day-column-mobile'));
   }
-}
-function removeActivityRemote(id){
-  if(!dbRef) return Promise.reject('No remote');
-  return dbRef.child(id).remove();
+
+  // attach click handlers to dayCols (crear actividad rápida)
+  dayCols.forEach(col=>{
+    // remover handlers previos si existieran
+    col.onclick = null;
+    col.addEventListener('click', (ev)=>{
+      if(ev.target.closest('.activity')) return;
+      const rect = col.getBoundingClientRect();
+      const y = ev.clientY - rect.top;
+      const minutes = START_H*60 + (y / HOUR_H) * 60;
+      let hh = Math.floor(minutes/60);
+      let mm = Math.round((minutes%60)/15)*15;
+      if(mm === 60){ hh += 1; mm = 0; }
+      const hhStr = String(hh).padStart(2,'0'); const mmStr = String(mm).padStart(2,'0');
+      inputDay.value = col.dataset.day;
+      inputStart.value = hhStr + ':' + mmStr;
+      let endMin = minutes + 60; let endH = Math.floor(endMin/60); let endM = Math.round((endMin%60)/15)*15;
+      if(endM === 60){ endH += 1; endM = 0; }
+      if(endH >= 24){ endH = 23; endM = 59; }
+      inputEnd.value = String(endH).padStart(2,'0') + ':' + String(endM).padStart(2,'0');
+      window.scrollTo({top:0,behavior:'smooth'});
+      inputTitle.focus();
+    });
+  });
 }
 
 /* =======================
    Render / Layout
    ======================= */
 function renderAll(){
-  dayCols.forEach(c=>{ Array.from(c.querySelectorAll('.activity')).forEach(n=>n.remove()); });
+  // ensure layout exists
+  buildCalendarLayout();
+
+  // limpiar cada columna
+  dayCols.forEach(c=>{
+    // remove only elements with class activity (leave hour lines)
+    Array.from(c.querySelectorAll('.activity')).forEach(n=>n.remove());
+  });
+
+  // render per day
   DAYS.forEach(day=>{
-    const acts = activities.filter(a=>a.day===day).map(a=>({...a, _startMin:timeToMinutes(a.start), _endMin:timeToMinutes(a.end)})).sort((a,b)=>a._startMin - b._startMin);
+    const acts = activities.filter(a=>a.day===day).map(a=>({...a, _startMin: timeToMinutes(a.start), _endMin: timeToMinutes(a.end)})).sort((a,b)=>a._startMin - b._startMin);
     const layouted = computeLayoutForDay(acts);
     layouted.forEach(a=>renderActivity(a));
   });
 }
 
-/* layout para solapamientos */
 function computeLayoutForDay(items){
   const columns = [];
   items.forEach(item=>{
@@ -342,7 +421,9 @@ function computeLayoutForDay(items){
 }
 
 function renderActivity(a){
-  const col = dayCols.find(c=>c.dataset.day===a.day); if(!col) return;
+  // find current column matching this day (mobile: .day-column-mobile, desktop: .day-column)
+  const col = dayCols.find(c=>c.dataset.day===a.day);
+  if(!col) return;
   const startMin = a._startMin ?? timeToMinutes(a.start);
   const endMin = a._endMin ?? timeToMinutes(a.end);
   const topMin = clamp(startMin - START_H*60, 0, (END_H-START_H)*60);
@@ -353,7 +434,6 @@ function renderActivity(a){
   const el = document.createElement('div'); el.className = 'activity';
   el.style.top = topPx + 'px';
 
-  // altura final calculada (no usar offsetHeight por problemas en móviles)
   const minH = 44;
   const finalHeight = Math.max(minH, Math.max(12, heightPx - 6));
   el.style.height = finalHeight + 'px';
@@ -377,21 +457,18 @@ function renderActivity(a){
   el.setAttribute('role', 'button');
   el.setAttribute('aria-label', `${a.title} ${a.start} a ${a.end}`);
 
-  // contenido seguro
+  // contenido
   const titleDiv = document.createElement('div'); titleDiv.className = 'title'; titleDiv.textContent = a.title || '';
   const descDiv = document.createElement('div'); descDiv.className = 'desc';
   descDiv.innerHTML = `${escapeHtml(a.start)} - ${escapeHtml(a.end)}${a.desc? '<br>' + escapeHtml(a.desc) : ''}`;
 
   el.appendChild(titleDiv);
-  // mostramos o no la descripción según altura calculada
   if(finalHeight >= 58) { el.appendChild(descDiv); }
 
-  // tooltip con todo
   el.title = `${a.title} — ${a.start} - ${a.end}${a.desc? '\n' + a.desc : ''}`;
 
-  // accesibilidad / edición
   el.addEventListener('click', ev=>{ ev.stopPropagation(); startEdit(a.id); });
-  el.addEventListener('keydown', ev=>{ if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); startEdit(a.id);} });
+  el.addEventListener('keydown', ev=>{ if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); startEdit(a.id); } });
 
   col.appendChild(el);
 }
@@ -400,13 +477,7 @@ function renderActivity(a){
    Form / CRUD
    ======================= */
 function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-function resetForm(){
-  inputTitle.value=''; inputDesc.value=''; inputColor.value='#60a5fa'; inputStart.value='08:00'; inputEnd.value='09:00'; inputDay.value=DAYS[0];
-  editingId = null; btnAdd.style.display='inline-block'; btnUpdate.style.display='none'; btnDelete.style.display='none';
-  inputTitle.focus();
-}
-
+function resetForm(){ inputTitle.value=''; inputDesc.value=''; inputColor.value='#60a5fa'; inputStart.value='08:00'; inputEnd.value='09:00'; inputDay.value=DAYS[0]; editingId = null; btnAdd.style.display='inline-block'; btnUpdate.style.display='none'; btnDelete.style.display='none'; inputTitle.focus(); }
 function collectForm(){
   const title = inputTitle.value.trim(); if(!title){ alert('Pon un nombre a la actividad'); inputTitle.focus(); return null; }
   const start = inputStart.value; const end = inputEnd.value;
@@ -415,19 +486,14 @@ function collectForm(){
   return { day: inputDay.value, start, end, title, desc: inputDesc.value.trim(), color: inputColor.value };
 }
 
-/* Add / Update / Delete - usan Firebase si está configurado, si no usan localStorage */
+/* Add / Update / Delete */
 async function addActivity(){
   const a = collectForm(); if(!a) return;
-  if(REMOTE_ENABLED){
-    // crea nueva key push
-    const newRef = dbRef.push();
-    a.id = newRef.key;
-    await pushActivityToRemote(a);
-    // el listener remoto actualizará la UI
+  if(REMOTE_ENABLED && dbRef){
+    const newRef = dbRef.push(); a.id = newRef.key; await pushActivityToRemote(a);
   } else {
     a.id = Date.now().toString(36) + Math.random().toString(36).slice(2,6);
-    activities.push(a);
-    saveLocal(); renderAll(); resetForm();
+    activities.push(a); saveLocal(); renderAll(); resetForm();
   }
   resetForm();
 }
@@ -436,11 +502,10 @@ async function updateActivity(){
   if(!editingId) return;
   const a = collectForm(); if(!a) return;
   a.id = editingId;
-  if(REMOTE_ENABLED){
+  if(REMOTE_ENABLED && dbRef){
     await pushActivityToRemote(a);
   } else {
-    const idx = activities.findIndex(x=>x.id === editingId); if(idx >= 0) activities[idx] = a;
-    saveLocal(); renderAll(); resetForm();
+    const idx = activities.findIndex(x=>x.id === editingId); if(idx >= 0) activities[idx] = a; saveLocal(); renderAll(); resetForm();
   }
   resetForm();
 }
@@ -448,7 +513,7 @@ async function updateActivity(){
 async function deleteActivity(){
   if(!editingId) return;
   if(!confirm('¿Borrar esta actividad?')) return;
-  if(REMOTE_ENABLED){
+  if(REMOTE_ENABLED && dbRef){
     await removeActivityRemote(editingId);
   } else {
     activities = activities.filter(x=>x.id !== editingId); saveLocal(); renderAll(); resetForm();
@@ -466,17 +531,21 @@ function startEdit(id){
 }
 
 /* =======================
+   Firebase helpers
+   ======================= */
+function pushActivityToRemote(a){
+  if(!dbRef) return Promise.reject('No remote');
+  if(a.id){
+    const id=a.id; const copy={...a}; delete copy.id; return dbRef.child(id).set(copy);
+  } else { const newRef=dbRef.push(); a.id=newRef.key; const copy={...a}; delete copy.id; return newRef.set(copy); }
+}
+function removeActivityRemote(id){ if(!dbRef) return Promise.reject('No remote'); return dbRef.child(id).remove(); }
+
+/* =======================
    Local storage backup
    ======================= */
-function saveLocal(){
-  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(activities)); }catch(e){ console.warn('No se pudo guardar localStorage', e); }
-}
-function loadLocal(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw){ activities = JSON.parse(raw) || []; }
-  }catch(e){ activities = []; }
-}
+function saveLocal(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(activities)); }catch(e){ console.warn('No se pudo guardar localStorage', e); } }
+function loadLocal(){ try{ const raw = localStorage.getItem(STORAGE_KEY); if(raw){ activities = JSON.parse(raw) || []; } }catch(e){ activities = []; } }
 
 /* =======================
    Import/Export, events
@@ -496,65 +565,58 @@ btnExport.addEventListener('click', ()=>{
 
 btnImport.addEventListener('click', ()=>fileInput.click());
 fileInput.addEventListener('change', e=>{
-  const f = e.target.files[0]; if(!f) return;
-  const reader = new FileReader(); reader.onload = ()=>{
+  const f=e.target.files[0]; if(!f)return; const reader=new FileReader(); reader.onload=()=>{
     try{
-      const parsed = JSON.parse(reader.result);
-      if(Array.isArray(parsed) && parsed.every(it=> it && typeof it.day === 'string' && typeof it.start === 'string' && typeof it.end === 'string' && typeof it.title === 'string')){
-        if(confirm('¿Reemplazar las actividades locales con las del archivo? Pulsa CANCELAR para MERGEAR')){ activities = parsed; } else { activities = activities.concat(parsed); }
-        if(REMOTE_ENABLED){
-          // subir todas las actividades remotas es complejo; mejor dejar que el listener remoto haga merge
-          alert('Importado localmente. Si usas Firebase, espera a que se sincronicen o sube manualmente.');
-        }
+      const parsed=JSON.parse(reader.result);
+      if(Array.isArray(parsed)&&parsed.every(it=>it&&typeof it.day==='string'&&typeof it.start==='string'&&typeof it.end==='string'&&typeof it.title==='string')){
+        if(confirm('¿Reemplazar las actividades locales con las del archivo? Pulsa CANCELAR para MERGEAR')){ activities=parsed; } else { activities=activities.concat(parsed); }
+        if(REMOTE_ENABLED){ alert('Importado localmente. Si usas Firebase, espera a que se sincronicen o sube manualmente.'); }
         saveLocal(); renderAll(); alert('Importado ✔');
       } else alert('JSON no válido: espera un array de actividades con propiedades day, start, end, title.');
     }catch(err){ alert('Error al leer JSON'); console.error(err); }
-  };
-  reader.readAsText(f); e.target.value = '';
-});
-
-/* crear evento click en columnas para crear rápida */
-dayCols.forEach(col=>{
-  col.addEventListener('click', ev=>{
-    if(ev.target.closest('.activity')) return;
-    const rect = col.getBoundingClientRect();
-    const y = ev.clientY - rect.top;
-    const minutes = START_H*60 + (y / HOUR_H) * 60;
-    let hh = Math.floor(minutes/60);
-    let mm = Math.round((minutes%60)/15)*15;
-    if(mm === 60){ hh += 1; mm = 0; }
-    inputDay.value = col.dataset.day;
-    inputStart.value = String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0');
-    let endMin = minutes + 60; let endH = Math.floor(endMin/60); let endM = Math.round((endMin%60)/15)*15;
-    if(endM === 60){ endH += 1; endM = 0; }
-    if(endH >= 24){ endH = 23; endM = 59; }
-    inputEnd.value = String(endH).padStart(2,'0') + ':' + String(endM).padStart(2,'0');
-    window.scrollTo({top:0,behavior:'smooth'}); inputTitle.focus();
-  });
+  }; reader.readAsText(f); e.target.value='';
 });
 
 /* =======================
-   Inicialización final
+   Util / time helpers
    ======================= */
-function load(){
-  // si hay firebase config, inicializamos y usamos remoto
-  initFirebaseIfConfigured();
+const timeToMinutes=t=>{ const [hh,mm]=String(t||'').split(':').map(Number); return Number.isNaN(hh)||Number.isNaN(mm)?0:hh*60+mm; };
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
-  // si remoto no cargó todavía, usamos local como fallback inmediato
-  if(!REMOTE_ENABLED){
-    loadLocal();
+/* =======================
+   Handle resize: rebuild layout on breakpoint change
+   ======================= */
+let lastWasNarrow = null;
+function handleResize(){
+  const nowNarrow = window.innerWidth <= 420;
+  if(lastWasNarrow === null || lastWasNarrow !== nowNarrow){
+    // layout change -> rebuild + render
+    buildCalendarLayout();
     renderAll();
-  } else {
-    // si remoto está activado, load() confiará en el listener remoto para poblar la UI
-    // pero también mostramos local temporalmente hasta que llegue el remoto
-    loadLocal();
-    if(Array.isArray(activities) && activities.length > 0){
-      renderAll();
-    }
-    // el listener remoto (attachFirebaseListeners) reemplazará la vista cuando llegue snapshot
+    lastWasNarrow = nowNarrow;
   }
 }
+window.addEventListener('resize', handleResize);
 
+/* =======================
+   Inicialización
+   ======================= */
+function load(){
+  initFirebaseIfConfigured();
+  if(!REMOTE_ENABLED){
+    loadLocal();
+    buildCalendarLayout();
+    renderAll();
+  } else {
+    // show local immediately while remote loads
+    loadLocal();
+    buildCalendarLayout();
+    if(Array.isArray(activities) && activities.length > 0) renderAll();
+    // remote listener will overwrite when snapshot arrives
+  }
+  // set initial lastWasNarrow to current
+  lastWasNarrow = window.innerWidth <= 420;
+}
 load();
 
 </script>
