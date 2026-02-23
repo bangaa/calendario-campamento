@@ -292,38 +292,108 @@ function attachFirebaseListeners(){
    Build calendar layout (desktop or mobile stacked)
    ======================= */
 function buildCalendarLayout(){
+  // Determinar rango dinámico (a partir de las actividades actuales)
+  // comenzamos desde los valores por defecto leídos del CSS
+  const cssStart = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--start-hour')) || START_H;
+  const cssEnd = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--end-hour')) || END_H;
+
+  // calcular min/max hora según actividades (si hay)
+  let minHour = cssStart;
+  let maxHour = cssEnd;
+
+  if(Array.isArray(activities) && activities.length > 0){
+    const starts = activities.map(a => Math.floor((timeToMinutes(a.start))/60));
+    const ends = activities.map(a => Math.ceil((timeToMinutes(a.end))/60));
+    const minA = Math.min(...starts);
+    const maxA = Math.max(...ends);
+    minHour = Math.min(minHour, minA);
+    maxHour = Math.max(maxHour, maxA);
+    // limitar a 0..24 por seguridad
+    minHour = Math.max(0, Math.min(23, minHour));
+    maxHour = Math.max(1, Math.min(24, maxHour));
+  }
+
+  // actualizamos las CSS vars para que las reglas que dependen de ellas (altura calculada) se adapten
+  document.documentElement.style.setProperty('--start-hour', String(minHour));
+  document.documentElement.style.setProperty('--end-hour', String(maxHour));
+
+  // recalculamos el número de horas visibles y (si usas HOUR_H en px por hora) no hace falta tocarlo
   const isNarrow = window.innerWidth <= 420;
-  // limpamos grid
   calendarGrid.innerHTML = '';
 
   if(!isNarrow){
-    // DESKTOP: reconstruir grid: empty cell, 4 headers, hoursCol, day columns
-    // primera fila: empty + headers
-    const empty = document.createElement('div');
-    calendarGrid.appendChild(empty);
+    // DESKTOP: empty + headers
+    const empty = document.createElement('div'); calendarGrid.appendChild(empty);
     for(const d of DAYS){
       const h = document.createElement('div'); h.className='col-header'; h.textContent = d;
       calendarGrid.appendChild(h);
     }
-    // segunda fila: hours col + day columns
+
+    // hours column (usa minHour..maxHour)
     const hoursCol = document.createElement('div'); hoursCol.className = 'hour-col'; hoursCol.id = 'hoursCol';
-    for(let hh=START_H; hh<END_H; hh++){
-      const lab = document.createElement('div'); lab.className='hour-label'; lab.textContent = String(hh).padStart(2,'0')+':00';
+    for(let hh = minHour; hh < maxHour; hh++){
+      const lab = document.createElement('div'); lab.className = 'hour-label'; lab.textContent = String(hh).padStart(2,'0')+':00';
       hoursCol.appendChild(lab);
     }
     calendarGrid.appendChild(hoursCol);
+
     for(const d of DAYS){
-      const col = document.createElement('div'); col.className='day-column'; col.dataset.day = d;
-      // añadir hour lines para posicionar visualmente
-      for(let hh=START_H; hh<END_H; hh++){
+      const col = document.createElement('div'); col.className = 'day-column'; col.dataset.day = d;
+      for(let hh = minHour; hh < maxHour; hh++){
         const line = document.createElement('div'); line.className='hour-line';
         col.appendChild(line);
       }
       calendarGrid.appendChild(col);
     }
-    // actualizar dayCols
     dayCols = Array.from(document.querySelectorAll('.day-column'));
   } else {
+    // MOBILE STACKED: day blocks con hours side
+    for(const d of DAYS){
+      const block = document.createElement('div'); block.className = 'day-block';
+      const header = document.createElement('div'); header.className='day-header'; header.textContent = d;
+      block.appendChild(header);
+      const inner = document.createElement('div'); inner.className = 'day-inner';
+      const hoursSide = document.createElement('div'); hoursSide.className = 'hours-side';
+      for(let hh = minHour; hh < maxHour; hh++){
+        const lab = document.createElement('div'); lab.className='hour-label'; lab.textContent = String(hh).padStart(2,'0')+':00';
+        hoursSide.appendChild(lab);
+      }
+      inner.appendChild(hoursSide);
+      const col = document.createElement('div'); col.className='day-column-mobile'; col.dataset.day = d;
+      for(let hh = minHour; hh < maxHour; hh++){
+        const line = document.createElement('div'); line.className='hour-line';
+        col.appendChild(line);
+      }
+      inner.appendChild(col);
+      block.appendChild(inner);
+      calendarGrid.appendChild(block);
+    }
+    dayCols = Array.from(document.querySelectorAll('.day-column-mobile'));
+  }
+
+  // attach handlers (igual que antes)
+  dayCols.forEach(col=>{
+    col.onclick = null;
+    col.addEventListener('click', (ev)=>{
+      if(ev.target.closest('.activity')) return;
+      const rect = col.getBoundingClientRect();
+      const y = ev.clientY - rect.top;
+      const minutes = minHour*60 + (y / HOUR_H) * 60; // importante: convertimos a partir de minHour
+      let hh = Math.floor(minutes/60);
+      let mm = Math.round((minutes%60)/15)*15;
+      if(mm === 60){ hh += 1; mm = 0; }
+      const hhStr = String(hh).padStart(2,'0'); const mmStr = String(mm).padStart(2,'0');
+      inputDay.value = col.dataset.day;
+      inputStart.value = hhStr + ':' + mmStr;
+      let endMin = minutes + 60; let endH = Math.floor(endMin/60); let endM = Math.round((endMin%60)/15)*15;
+      if(endM === 60){ endH += 1; endM = 0; }
+      if(endH >= 24){ endH = 23; endM = 59; }
+      inputEnd.value = String(endH).padStart(2,'0') + ':' + String(endM).padStart(2,'0');
+      window.scrollTo({top:0,behavior:'smooth'});
+      inputTitle.focus();
+    });
+  });
+}else {
     // MOBILE STACKED: para cada día creamos un bloque con header + left hours + right day-column-mobile
     for(const d of DAYS){
       const block = document.createElement('div'); block.className = 'day-block';
@@ -622,3 +692,4 @@ load();
 </script>
 </body>
 </html>
+
