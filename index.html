@@ -286,4 +286,52 @@
       const isNarrow=window.innerWidth<=420;
       calendarGrid.innerHTML='';
       if(!isNarrow){
-        const empty=document.createElement('div'); calendarGrid.appendChild
+        const empty=document.createElement('div'); calendarGrid.appendChild(empty);
+        for(const d of DAYS){const h=document.createElement('div'); h.className='col-header'; h.textContent=d; calendarGrid.appendChild(h);}
+        const hoursCol=document.createElement('div'); hoursCol.className='hour-col';
+        for(let hh=minHour; hh<maxHour; hh++){const lab=document.createElement('div'); lab.className='hour-label'; lab.textContent=String(hh).padStart(2,'0')+':00'; hoursCol.appendChild(lab);}
+        calendarGrid.appendChild(hoursCol);
+        for(const d of DAYS){const col=document.createElement('div'); col.className='day-column'; col.dataset.day=d; for(let hh=minHour; hh<maxHour; hh++){const line=document.createElement('div'); line.className='hour-line'; col.appendChild(line);} calendarGrid.appendChild(col);}
+        dayCols=Array.from(document.querySelectorAll('.day-column'));
+      }else{
+        for(const d of DAYS){
+          const block=document.createElement('div'); block.className='day-block';
+          const header=document.createElement('div'); header.className='day-header'; header.textContent=d; block.appendChild(header);
+          const inner=document.createElement('div'); inner.className='day-inner';
+          const hoursSide=document.createElement('div'); hoursSide.className='hours-side';
+          for(let hh=minHour; hh<maxHour; hh++){const lab=document.createElement('div'); lab.className='hour-label'; lab.textContent=String(hh).padStart(2,'0')+':00'; hoursSide.appendChild(lab);}
+          inner.appendChild(hoursSide);
+          const col=document.createElement('div'); col.className='day-column-mobile'; col.dataset.day=d;
+          for(let hh=minHour; hh<maxHour; hh++){const line=document.createElement('div'); line.className='hour-line'; col.appendChild(line);}
+          inner.appendChild(col);
+          block.appendChild(inner);
+          calendarGrid.appendChild(block);
+        }
+        dayCols=Array.from(document.querySelectorAll('.day-column-mobile'));
+      }
+      dayCols.forEach(col=>{
+        col.onclick=null;
+        col.addEventListener('click',(ev)=>{
+          if(ev.target.closest('.activity')) return;
+          const rect=col.getBoundingClientRect();
+          const y=ev.clientY-rect.top;
+          const minH=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--start-hour'))||8;
+          const minutes=minH*60+(y/HOUR_H)*60;
+          let hh=Math.floor(minutes/60);
+          let mm=Math.round((minutes%60)/15)*15; if(mm===60){hh+=1; mm=0;}
+          inputDay.value=col.dataset.day;
+          inputStart.value=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+          let endMin=minutes+60; let endH=Math.floor(endMin/60); let endM=Math.round((endMin%60)/15)*15; if(endM===60){endH+=1; endM=0;} if(endH>=24){endH=23; endM=59;}
+          inputEnd.value=String(endH).padStart(2,'0')+':'+String(endM).padStart(2,'0');
+          window.scrollTo({top:0,behavior:'smooth'});
+          inputTitle.focus();
+        });
+      });
+    }
+
+    window.addEventListener('resize',()=>{buildCalendarLayout(); renderAll();});
+
+    load();
+  </script>
+</body>
+</html>
