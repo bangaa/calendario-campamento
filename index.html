@@ -5,63 +5,74 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Calendario Campamento - Semana Santa 2026</title>
   <style>
-    /* Versión estable y compatible: no variables CSS dinámicas */
-    html,body{margin:0;padding:16px;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;color:#0f172a;background:#f6faf7}
+    /* Estética: botones con sombra, movimiento, tarjetas agradables */
+    :root{--bg:#f4fbf6;--card:#ffffff;--accent:#2f855a;--muted:#6b7280}
+    *{box-sizing:border-box;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial}
+    body{margin:0;background:var(--bg);color:#0f172a;padding:18px}
+    .top{display:flex;align-items:center;justify-content:space-between}
     h1{margin:0;font-size:20px}
-    .top{display:flex;justify-content:space-between;align-items:center;gap:12px}
-    .wrap{display:flex;gap:16px;margin-top:14px}
+    .muted{color:var(--muted);font-size:13px}
 
-    /* panel */
-    .panel{width:360px;background:white;padding:14px;border-radius:12px;box-shadow:0 8px 24px rgba(2,6,23,0.06)}
-    label{display:block;color:#6b7280;margin-top:10px;font-size:13px}
-    input[type=text], textarea, select, input[type=time]{width:100%;padding:8px;border-radius:8px;border:1px solid #e6edf3;margin-top:6px}
-    textarea{min-height:80px}
+    .container{display:flex;gap:18px;margin-top:14px}
+    .panel{width:380px;background:var(--card);padding:14px;border-radius:12px;box-shadow:0 10px 30px rgba(2,6,23,0.08)}
+
+    label{display:block;color:var(--muted);margin-top:10px;font-size:13px}
+    input[type=text], textarea, select, input[type=time]{width:100%;padding:10px;border-radius:10px;border:1px solid #e9f0ef;margin-top:6px;font-size:14px}
+    textarea{min-height:100px}
     .row{display:flex;gap:8px}
-    .btn{padding:8px 12px;border-radius:8px;border:none;cursor:pointer}
-    .btn-primary{background:#2f855a;color:white}
+
+    /* botones con efecto */
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:none;cursor:pointer;transition:all 160ms cubic-bezier(.2,.8,.2,1);box-shadow:0 6px 14px rgba(2,6,23,0.08)}
+    .btn:active{transform:translateY(2px);box-shadow:0 4px 8px rgba(2,6,23,0.06)}
+    .btn-primary{background:var(--accent);color:white}
     .btn-ghost{background:transparent;border:1px solid #e6edf3}
-    .muted{color:#6b7280;font-size:13px}
 
-    /* calendario simple y robusto */
-    .calendar-wrap{flex:1;background:transparent}
-    .calendar{display:flex;gap:6px;align-items:flex-start}
-    .hours{width:80px}
-    .hours .hour{height:60px;padding-right:8px;text-align:right;color:#6b7280;font-size:13px}
-    .days{flex:1;display:flex;gap:6px}
-    .day{flex:1;background:white;border-radius:8px;padding:6px;position:relative;overflow:hidden;box-shadow:0 8px 20px rgba(2,6,23,0.04)}
-    .day .header{text-align:center;font-weight:600;padding:6px 0}
-    .day .grid{position:relative}
-    .line{height:60px;border-bottom:1px dashed #eef2f6}
+    .small{font-size:13px}
 
-    .activity{position:absolute;left:6px;right:6px;border-radius:8px;padding:6px 8px;color:#fff;box-shadow:0 6px 12px rgba(2,6,23,0.12);font-size:13px;cursor:pointer;overflow:hidden}
-    .activity .title{font-weight:700}
-    .activity .desc{font-size:12px}
+    /* calendario grande en panel aparte */
+    .calendar-area{flex:1;display:flex;flex-direction:column;gap:8px}
+    .toolbar{display:flex;gap:8px;align-items:center}
 
-    .controls{display:flex;gap:8px;margin-top:12px}
-    .footer{margin-top:10px;font-size:13px;color:#6b7280}
+    .calendar-shell{background:var(--card);padding:12px;border-radius:12px;box-shadow:0 10px 28px rgba(2,6,23,0.06);overflow:auto}
+    .calendar-grid{display:flex;gap:8px;align-items:flex-start}
+    .hours{width:70px;flex-shrink:0}
+    .hour{height:48px;padding-right:8px;text-align:right;color:var(--muted);font-size:13px}
+    .days{flex:1;display:flex;gap:8px}
+    .day{flex:1;background:linear-gradient(180deg,#fff,#fbfffc);border-radius:10px;padding:6px;position:relative;overflow:visible}
+    .day .day-title{text-align:center;font-weight:700;padding:8px 6px;border-bottom:1px solid rgba(0,0,0,0.04);margin-bottom:6px}
+    .grid{position:relative}
+    .line{height:48px;border-bottom:1px dashed #eef2f6}
 
-    @media (max-width:900px){.wrap{flex-direction:column}.panel{width:100%}}
+    .activity{position:absolute;left:8px;right:8px;border-radius:10px;padding:8px;color:#fff;box-shadow:0 8px 18px rgba(2,6,23,0.12);font-size:13px;cursor:pointer;transition:transform 160ms}
+    .activity:hover{transform:translateY(-4px)}
+    .activity .title{font-weight:800}
+    .activity .time{font-size:12px;opacity:0.95}
+    .activity .desc{font-size:12px;opacity:0.95;margin-top:4px}
+
+    .footer{font-size:13px;color:var(--muted);margin-top:10px}
+
+    /* responsive */
+    @media (max-width:1000px){.container{flex-direction:column}.panel{width:100%}.hours{display:none}}
   </style>
 </head>
 <body>
   <div class="top">
     <div>
       <h1>📅 Calendario - Campamento Semana Santa 2026</h1>
-      <div class="muted">Viernes 27 — Lunes 30 de marzo</div>
+      <div class="muted">Viernes 27 (viernes) — Lunes 30 de marzo</div>
     </div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <button id="btnPrint" class="btn btn-ghost">Imprimir / Guardar PDF</button>
-      <button id="btnExport" class="btn btn-ghost">Descargar JSON</button>
-      <button id="btnImport" class="btn btn-ghost">Importar JSON</button>
+    <div class="toolbar">
+      <button id="btnExportPng" class="btn btn-ghost small">Exportar imagen (PNG)</button>
+      <button id="btnPrint" class="btn btn-ghost small">Imprimir / PDF</button>
+      <button id="btnExport" class="btn btn-ghost small">Exportar JSON</button>
+      <button id="btnImport" class="btn btn-ghost small">Importar JSON</button>
     </div>
   </div>
 
-  <div class="wrap">
+  <div class="container">
     <div class="panel">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <strong>Crear / Editar actividad</strong>
-        <button id="btnReset" class="btn btn-ghost small">Limpiar</button>
-      </div>
+      <strong>Crear / Editar actividad</strong>
+      <div class="muted" style="margin-top:6px">Selecciona día (27–30 marzo), hora, color y añade.</div>
 
       <label>Día</label>
       <select id="inputDay">
@@ -86,28 +97,40 @@
       <input id="inputTitle" type="text" placeholder="Ej. Ruta por la sierra" />
 
       <label>Descripción</label>
-      <textarea id="inputDesc" placeholder="Detalles, materiales, quién dirige..."></textarea>
+      <textarea id="inputDesc" placeholder="Materiales, quién dirige, notas..."></textarea>
 
       <label>Color</label>
       <input id="inputColor" type="color" value="#60a5fa" />
 
-      <div class="controls">
+      <div style="display:flex;gap:8px;margin-top:12px">
         <button id="btnAdd" class="btn btn-primary">Añadir actividad</button>
-        <button id="btnUpdate" class="btn btn-ghost" style="display:none">Guardar cambios</button>
+        <button id="btnUpdate" class="btn btn-ghost" style="display:none">Guardar</button>
         <button id="btnDelete" class="btn btn-ghost" style="display:none">Borrar</button>
       </div>
 
-      <div class="footer">Las actividades se guardan automáticamente en este equipo (localStorage). Puedes descargar el JSON para compartir o importar en otro equipo.</div>
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button id="btnQuick7" class="btn btn-ghost small">Ajustar 7:00</button>
+        <button id="btnQuick8" class="btn btn-ghost small">Ajustar 8:00</button>
+        <button id="btnReset" class="btn btn-ghost small">Limpiar</button>
+      </div>
+
+      <div class="footer">Las actividades se guardan en tu equipo (localStorage). Puedes importar/exportar JSON para compartir con los otros organizadores.</div>
     </div>
 
-    <div class="calendar-wrap">
-      <div class="calendar" id="calendar">
-        <div class="hours" id="hoursCol"></div>
-        <div class="days" id="daysCol">
-          <div class="day" data-day="Viernes 27"><div class="header">Viernes 27</div><div class="grid"></div></div>
-          <div class="day" data-day="Sábado 28"><div class="header">Sábado 28</div><div class="grid"></div></div>
-          <div class="day" data-day="Domingo 29"><div class="header">Domingo 29</div><div class="grid"></div></div>
-          <div class="day" data-day="Lunes 30"><div class="header">Lunes 30</div><div class="grid"></div></div>
+    <div class="calendar-area">
+      <div class="calendar-shell" id="calendarShell">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="font-weight:700">Vista calendario — Día y hora</div>
+          <div class="muted">Haz click en una columna para añadir hora rápida</div>
+        </div>
+        <div class="calendar-grid" id="calendarGrid">
+          <div class="hours" id="hoursCol"></div>
+          <div class="days" id="daysCol">
+            <div class="day" data-day="Viernes 27"><div class="day-title">Viernes 27</div><div class="grid"></div></div>
+            <div class="day" data-day="Sábado 28"><div class="day-title">Sábado 28</div><div class="grid"></div></div>
+            <div class="day" data-day="Domingo 29"><div class="day-title">Domingo 29</div><div class="grid"></div></div>
+            <div class="day" data-day="Lunes 30"><div class="day-title">Lunes 30</div><div class="grid"></div></div>
+          </div>
         </div>
       </div>
     </div>
@@ -116,126 +139,157 @@
   <input id="fileInput" type="file" accept="application/json" style="display:none" />
 
   <script>
-    // Versión robusta: no dependemos de CSS variables complejas
-    const DAYS = ['Viernes 27','Sábado 28','Domingo 29','Lunes 30'];
-    const START_H = 8; // hora inicio
-    const END_H = 23; // hora fin
-    const HOUR_PX = 60; // px por hora
-    const TOTAL_H = END_H - START_H;
-    const TOTAL_PX = TOTAL_H * HOUR_PX; // 15*60 = 900px
+    /* CONFIG - full day (cubre 0:00 - 24:00) para poder meter cualquier hora */
+    const START_H = 0, END_H = 24, HOUR_PX = 48; // 24*48 = 1152px
+    const TOTAL_PX = (END_H - START_H) * HOUR_PX;
 
+    const days = ['Viernes 27','Sábado 28','Domingo 29','Lunes 30'];
     const hoursCol = document.getElementById('hoursCol');
     const daysCol = document.getElementById('daysCol');
 
-    // crear labels y líneas de hora
+    // crear horas y líneas
     for(let h=START_H; h<END_H; h++){
       const lab = document.createElement('div'); lab.className='hour'; lab.textContent = String(h).padStart(2,'0')+':00'; hoursCol.appendChild(lab);
-
-      // en cada day grid añadir linea
-      const dayEls = daysCol.querySelectorAll('.day .grid');
-      dayEls.forEach(dg=>{
-        const line = document.createElement('div'); line.className='line'; dg.appendChild(line);
-      })
+      daysCol.querySelectorAll('.day .grid').forEach(g=>{ const line = document.createElement('div'); line.className='line'; g.appendChild(line); });
     }
+    daysCol.querySelectorAll('.day .grid').forEach(g=>{ g.style.height = TOTAL_PX + 'px'; g.style.position = 'relative'; g.style.overflow = 'visible'; });
 
-    // aseguramos la altura de cada grid
-    daysCol.querySelectorAll('.day .grid').forEach(g=>{ g.style.height = TOTAL_PX+'px'; g.style.position='relative'; });
-
-    // utilidades
-    const timeToMinutes = t=>{ const [hh,mm]=t.split(':').map(Number); return hh*60+mm; }
+    // util
+    const timeToMin = t=>{ const [hh,mm]=t.split(':').map(Number); return hh*60+mm; }
     const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
-    let activities = []; const STORAGE_KEY='campamento-semanasanta-2026';
-    const inputDay=document.getElementById('inputDay');
-    const inputStart=document.getElementById('inputStart');
-    const inputEnd=document.getElementById('inputEnd');
-    const inputTitle=document.getElementById('inputTitle');
-    const inputDesc=document.getElementById('inputDesc');
-    const inputColor=document.getElementById('inputColor');
-    const btnAdd=document.getElementById('btnAdd');
-    const btnUpdate=document.getElementById('btnUpdate');
-    const btnDelete=document.getElementById('btnDelete');
-    const btnReset=document.getElementById('btnReset');
-    const btnPrint=document.getElementById('btnPrint');
-    const btnExport=document.getElementById('btnExport');
-    const btnImport=document.getElementById('btnImport');
-    const fileInput=document.getElementById('fileInput');
+    // storage
+    const STORAGE_KEY = 'campamento-semanasanta-2026-v2';
+    let activities = [];
+
+    // form elems
+    const inputDay = document.getElementById('inputDay');
+    const inputStart = document.getElementById('inputStart');
+    const inputEnd = document.getElementById('inputEnd');
+    const inputTitle = document.getElementById('inputTitle');
+    const inputDesc = document.getElementById('inputDesc');
+    const inputColor = document.getElementById('inputColor');
+    const btnAdd = document.getElementById('btnAdd');
+    const btnUpdate = document.getElementById('btnUpdate');
+    const btnDelete = document.getElementById('btnDelete');
+    const btnReset = document.getElementById('btnReset');
+    const btnQuick7 = document.getElementById('btnQuick7');
+    const btnQuick8 = document.getElementById('btnQuick8');
+    const btnExport = document.getElementById('btnExport');
+    const btnImport = document.getElementById('btnImport');
+    const fileInput = document.getElementById('fileInput');
+    const btnPrint = document.getElementById('btnPrint');
+    const btnExportPng = document.getElementById('btnExportPng');
 
     let editingId = null;
 
     function load(){
-      try{ activities = JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'); }catch(e){ activities=[]; }
+      try{ activities = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }catch(e){ activities = []; }
       renderAll();
-      console.log('Loaded activities', activities.length);
     }
-
     function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(activities)); }
 
+    function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
     function renderAll(){
-      // limpiar
       daysCol.querySelectorAll('.day .grid').forEach(g=>{ g.querySelectorAll('.activity').forEach(n=>n.remove()); });
       activities.forEach(a=>renderActivity(a));
-      console.log('Rendered activities:', activities.length, document.querySelectorAll('.activity').length);
     }
 
     function renderActivity(a){
       const dayEl = Array.from(daysCol.querySelectorAll('.day')).find(d=>d.dataset.day===a.day);
       if(!dayEl) return;
       const grid = dayEl.querySelector('.grid');
-      const startMin = timeToMinutes(a.start);
-      const endMin = timeToMinutes(a.end);
+
+      // si end <= start => evento pasa a siguiente dia técnicamente, pero lo mostramos en el día seleccionado
+      let startMin = timeToMin(a.start);
+      let endMin = timeToMin(a.end);
+      if(endMin <= startMin){ endMin += 24*60; }
       const topMin = clamp(startMin - START_H*60, 0, (END_H-START_H)*60);
-      const durMin = clamp(endMin - startMin, 15, (END_H-START_H)*60 - topMin);
+      const durMin = clamp(endMin - startMin, 15, (END_H-START_H)*60*2); // permitir hasta doble día si necesidad
       const topPx = (topMin/60) * HOUR_PX;
       const heightPx = (durMin/60) * HOUR_PX;
 
-      const el = document.createElement('div'); el.className='activity';
+      const el = document.createElement('div'); el.className = 'activity';
       el.style.top = topPx + 'px';
-      el.style.height = Math.max(28, heightPx - 6) + 'px';
+      el.style.height = Math.max(30, heightPx - 8) + 'px';
       el.style.background = a.color || '#60a5fa';
       el.dataset.id = a.id;
-      el.innerHTML = `<div class="title">${escapeHtml(a.title)}</div><div class="desc">${escapeHtml(a.start)} - ${escapeHtml(a.end)}${a.desc?'<br>'+escapeHtml(a.desc):''}</div>`;
-      el.title = `${a.title} — ${a.start} - ${a.end}${a.desc?'
-'+a.desc:''}`;
-      el.addEventListener('click',(ev)=>{ ev.stopPropagation(); startEdit(a.id); });
+      el.innerHTML = `<div class="title">${escapeHtml(a.title)}</div><div class="time">${escapeHtml(a.start)} - ${escapeHtml(a.end)}</div>${a.desc?'<div class="desc">'+escapeHtml(a.desc)+'</div>':''}`;
+      el.title = `${a.title} — ${a.start} - ${a.end}\n${a.desc||''}`;
+      el.addEventListener('click', e=>{ e.stopPropagation(); startEdit(a.id); });
       grid.appendChild(el);
     }
 
-    function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function collectForm(){
+      const title = inputTitle.value.trim(); if(!title){ alert('Pon un nombre a la actividad'); return null }
+      const start = inputStart.value; const end = inputEnd.value; if(!start||!end){ alert('Pon inicio y fin'); return null }
+      // no bloqueamos end <= start (aceptamos eventos que pasan a la madrugada)
+      return { id: editingId || (Date.now().toString(36)+Math.random().toString(36).slice(2,6)), day: inputDay.value, start, end, title, desc: inputDesc.value.trim(), color: inputColor.value };
+    }
 
-    function resetForm(){ inputTitle.value=''; inputDesc.value=''; inputColor.value='#60a5fa'; inputStart.value='08:00'; inputEnd.value='09:00'; inputDay.value=DAYS[0]; editingId=null; btnAdd.style.display='inline-block'; btnUpdate.style.display='none'; btnDelete.style.display='none'; }
+    function addActivity(){ const a = collectForm(); if(!a) return; activities.push(a); save(); renderAll(); playAddSound(); resetForm(); }
+    function startEdit(id){ const a = activities.find(x=>x.id===id); if(!a) return; editingId = id; inputDay.value=a.day; inputStart.value=a.start; inputEnd.value=a.end; inputTitle.value=a.title; inputDesc.value=a.desc||''; inputColor.value=a.color||'#60a5fa'; btnAdd.style.display='none'; btnUpdate.style.display='inline-block'; btnDelete.style.display='inline-block'; }
+    function updateActivity(){ if(!editingId) return; const idx = activities.findIndex(x=>x.id===editingId); if(idx<0) return; const a = collectForm(); if(!a) return; activities[idx]=a; save(); renderAll(); resetForm(); }
+    function deleteActivity(){ if(!editingId) return; if(!confirm('¿Borrar esta actividad?')) return; activities = activities.filter(x=>x.id!==editingId); save(); renderAll(); resetForm(); }
+    function resetForm(){ inputTitle.value=''; inputDesc.value=''; inputColor.value='#60a5fa'; inputStart.value='08:00'; inputEnd.value='09:00'; inputDay.value=days[0]; editingId=null; btnAdd.style.display='inline-block'; btnUpdate.style.display='none'; btnDelete.style.display='none'; }
 
-    function collectForm(){ const title=inputTitle.value.trim(); if(!title){ alert('Pon un nombre a la actividad'); return null } const start=inputStart.value; const end=inputEnd.value; if(!start||!end){ alert('Pon hora inicio y fin'); return null } if(timeToMinutes(end)<=timeToMinutes(start)){ alert('La hora de fin debe ser posterior al inicio'); return null } return { id: editingId || (Date.now().toString(36)+Math.random().toString(36).slice(2,6)), day: inputDay.value, start, end, title, desc: inputDesc.value.trim(), color: inputColor.value } }
+    // quick presets
+    btnQuick7.addEventListener('click', ()=>{ inputStart.value='07:00'; inputEnd.value='08:00'; });
+    btnQuick8.addEventListener('click', ()=>{ inputStart.value='08:00'; inputEnd.value='09:00'; });
 
-    function addActivity(){ const a=collectForm(); if(!a) return; activities.push(a); save(); renderAll(); resetForm(); }
-    function startEdit(id){ const a=activities.find(x=>x.id===id); if(!a) return; editingId=id; inputDay.value=a.day; inputStart.value=a.start; inputEnd.value=a.end; inputTitle.value=a.title; inputDesc.value=a.desc||''; inputColor.value=a.color||'#60a5fa'; btnAdd.style.display='none'; btnUpdate.style.display='inline-block'; btnDelete.style.display='inline-block'; window.scrollTo({top:0,behavior:'smooth'}); }
-    function updateActivity(){ if(!editingId) return; const idx=activities.findIndex(x=>x.id===editingId); if(idx<0) return; const a=collectForm(); if(!a) return; activities[idx]=a; save(); renderAll(); resetForm(); }
-    function deleteActivity(){ if(!editingId) return; if(!confirm('¿Borrar esta actividad?')) return; activities=activities.filter(x=>x.id!==editingId); save(); renderAll(); resetForm(); }
+    // form events
+    btnAdd.addEventListener('click', addActivity);
+    btnUpdate.addEventListener('click', updateActivity);
+    btnDelete.addEventListener('click', deleteActivity);
+    btnReset.addEventListener('click', resetForm);
 
-    document.getElementById('btnAdd').addEventListener('click',addActivity);
-    document.getElementById('btnUpdate').addEventListener('click',updateActivity);
-    document.getElementById('btnDelete').addEventListener('click',deleteActivity);
-    document.getElementById('btnReset').addEventListener('click',resetForm);
-    document.getElementById('btnPrint').addEventListener('click',()=>window.print());
-
-    document.getElementById('btnExport').addEventListener('click',()=>{ const dataStr=JSON.stringify(activities,null,2); const blob=new Blob([dataStr],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='campamento-planning.json'; a.click(); URL.revokeObjectURL(url); });
-
-    document.getElementById('btnImport').addEventListener('click',()=>fileInput.click());
-    fileInput.addEventListener('change',(e)=>{ const f=e.target.files[0]; if(!f) return; const reader=new FileReader(); reader.onload=()=>{ try{ const parsed=JSON.parse(reader.result); if(Array.isArray(parsed)){ if(confirm('¿Reemplazar actividades locales con las del archivo? Pulsa CANCELAR para MERGEAR')){ activities=parsed; } else { activities=activities.concat(parsed); } save(); renderAll(); alert('Importado ✔'); } else alert('JSON no válido'); }catch(err){ alert('Error al leer JSON'); }}; reader.readAsText(f); });
-
-    // click rapido en columna para sugerir hora
+    // click rapido en grid
     daysCol.querySelectorAll('.day .grid').forEach(grid=>{
-      grid.addEventListener('click', (ev)=>{
-        const rect=grid.getBoundingClientRect(); const y=ev.clientY-rect.top; const minutes = START_H*60 + (y / HOUR_PX) * 60; const hh=Math.floor(minutes/60).toString().padStart(2,'0'); let mm=Math.round(minutes%60/15)*15; if(mm===60){ mm=0; }
-        inputDay.value = grid.parentElement.dataset.day; inputStart.value = hh+':'+String(mm).padStart(2,'0'); const endMin = minutes + 60; const eh = Math.floor(endMin/60).toString().padStart(2,'0'); const em = Math.round(endMin%60/15)*15; inputEnd.value = eh+':'+String(em).padStart(2,'0'); window.scrollTo({top:0,behavior:'smooth'});
+      grid.addEventListener('click', ev=>{
+        const rect = grid.getBoundingClientRect(); const y = ev.clientY - rect.top; const minutes = START_H*60 + (y / HOUR_PX) * 60; const hh = Math.floor(minutes/60).toString().padStart(2,'0'); let mm = Math.round(minutes%60/15)*15; if(mm===60) mm=0; inputStart.value = hh+':'+String(mm).padStart(2,'0'); let endMin = minutes + 60; const eh = Math.floor(endMin/60).toString().padStart(2,'0'); const em = Math.round(endMin%60/15)*15; inputEnd.value = eh+':'+String(em).padStart(2,'0'); inputDay.value = grid.parentElement.dataset.day; window.scrollTo({top:0,behavior:'smooth'});
       })
     });
 
-    // debug quick-check function
-    function debugCheck(){ console.log('Hours rendered:', hoursCol.children.length); console.log('Day grids:', daysCol.querySelectorAll('.day .grid').length); console.log('Grid heights:', Array.from(daysCol.querySelectorAll('.day .grid')).map(g=>g.style.height)); }
+    // storage import/export
+    btnExport.addEventListener('click', ()=>{ const dataStr = JSON.stringify(activities,null,2); const blob = new Blob([dataStr], {type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'campamento-planning.json'; a.click(); URL.revokeObjectURL(url); });
+    document.getElementById('btnImport').addEventListener('click', ()=>fileInput.click());
+    fileInput.addEventListener('change', e=>{ const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = ()=>{ try{ const parsed = JSON.parse(r.result); if(Array.isArray(parsed)){ if(confirm('¿Reemplazar actividades locales con las del archivo? Pulsa CANCELAR para MERGEAR')){ activities = parsed; } else { activities = activities.concat(parsed); } save(); renderAll(); alert('Importado ✔'); } else alert('JSON no válido'); }catch(err){ alert('Error al leer JSON') } }; r.readAsText(f); });
 
-    // initial
-    load(); debugCheck();
+    // print
+    btnPrint.addEventListener('click', ()=>{ window.print(); });
+
+    // export PNG via SVG foreignObject technique (works offline in modern browsers)
+    btnExportPng.addEventListener('click', async ()=>{
+      try{
+        const node = document.querySelector('.calendar-shell');
+        const width = Math.min(node.scrollWidth, 1400);
+        const height = node.scrollHeight;
+        const clone = node.cloneNode(true);
+        // inline styles computed
+        inlineAllStyles(clone);
+        const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${width}' height='${height}'><foreignObject width='100%' height='100%'>${new XMLSerializer().serializeToString(clone)}</foreignObject></svg>`;
+        const img = new Image(); const svg64 = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+        img.onload = ()=>{
+          const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,width,height); ctx.drawImage(img,0,0);
+          const url = canvas.toDataURL('image/png'); const a = document.createElement('a'); a.href = url; a.download = 'calendario-campamento.png'; a.click();
+        };
+        img.src = svg64;
+      }catch(err){ alert('Error exportando imagen: '+err); }
+    });
+
+    // helper: inline computed styles to cloned node so foreignObject renders well
+    function inlineAllStyles(root){ const elems = root.querySelectorAll('*'); const win = document.defaultView; elems.forEach(el=>{ try{ const cs = win.getComputedStyle(el); let s=''; for(let i=0;i<cs.length;i++){ const prop = cs[i]; s += prop + ':' + cs.getPropertyValue(prop) + ';'; } el.setAttribute('style', s); }catch(e){} }); }
+
+    // sound on add (short pleasant blip)
+    function playAddSound(){ try{ const ctx = new (window.AudioContext||window.webkitAudioContext)(); const o = ctx.createOscillator(); const g = ctx.createGain(); o.type='sine'; o.frequency.value=880; g.gain.value=0.0015; o.connect(g); g.connect(ctx.destination); o.start(); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.15); o.stop(ctx.currentTime+0.18); }catch(e){}
+    }
+
+    // init
+    load();
+
+    // debug: expose for console
+    window.__camp = { activities, renderAll };
   </script>
 </body>
 </html>
