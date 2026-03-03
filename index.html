@@ -4,6 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Calendario Campamento - Semana Santa 2026</title>
+
+  <!-- Firebase CDN (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
   <style>
     /* Estética: botones con sombra, movimiento, tarjetas agradables */
     :root{--bg:#f4fbf6;--card:#ffffff;--accent:#2f855a;--muted:#6b7280}
@@ -114,7 +119,7 @@
         <button id="btnReset" class="btn btn-ghost small">Limpiar</button>
       </div>
 
-      <div class="footer">Las actividades se guardan en tu equipo (localStorage). Puedes importar/exportar JSON para compartir con los otros organizadores.</div>
+      <div class="footer">Las actividades se guardan en tu equipo (ahora también en Firebase). Puedes importar/exportar JSON para compartir con los otros organizadores.</div>
     </div>
 
     <div class="calendar-area">
@@ -146,8 +151,22 @@
     const hoursCol = document.getElementById('hoursCol');
     const daysCol = document.getElementById('daysCol');
 
-    // storage
-    const STORAGE_KEY = 'campamento-semanasanta-2026-v2';
+    // ----- FIREBASE CONFIGURATION -----
+    const firebaseConfig = {
+      apiKey: "AIzaSyAhzhr7P7m1CDYZhQPwtP78OEm6jGwwDGE",
+      authDomain: "camp-sem-sant.firebaseapp.com",
+      databaseURL: "https://camp-sem-sant-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "camp-sem-sant",
+      storageBucket: "camp-sem-sant.firebasedestorage.app",
+      messagingSenderId: "483863490995",
+      appId: "1:483863490995:web:5474b5a0984553baf29bc6"
+    };
+
+    // Initialize Firebase (compat)
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    // storage (now via Firebase)
     let activities = [];
 
     // form elems
@@ -195,6 +214,9 @@
       dayGrids.forEach(g=>{ g.style.height = totalPx + 'px'; g.style.position = 'relative'; g.style.overflow = 'visible'; });
 
       currentMinHour = minHour; currentMaxHour = maxHour;
+
+      // reattach quick click handlers because grid is rebuilt
+      try{ attachQuickClick(); }catch(e){}
     }
 
     function computeRangeFromActivities(){
@@ -217,14 +239,38 @@
       return {minH, maxH};
     }
 
+    // --- FIREBASE-BASED LOAD & SAVE (realtime) ---
     function load(){
-      try{ activities = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }catch(e){ activities = []; }
-      // build initial grid based on activities
-      const range = computeRangeFromActivities();
-      buildGrid(range.minH, range.maxH);
-      renderAll();
+      // listen for realtime updates and render automatically
+      database.ref('activities').on('value', (snapshot) => {
+        const val = snapshot.val();
+        if (!val) {
+          activities = [];
+        } else if (Array.isArray(val)) {
+          activities = val;
+        } else if (typeof val === 'object') {
+          // If stored as object, try to convert to array safely (keeps original ordering if present)
+          // If object keys are numeric indexes, we convert to array; otherwise use Object.values.
+          const keys = Object.keys(val);
+          const numericKeys = keys.every(k => String(parseInt(k)) === k);
+          activities = numericKeys ? keys.map(k => val[k]) : Object.values(val);
+        } else {
+          activities = [];
+        }
+        // Re-render after we update activities
+        try{ renderAll(); }catch(e){ console.error(e); }
+      });
     }
-    function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(activities)); }
+
+    function save(){
+      // push the full activities array to Firebase (overwrites)
+      // keep as array so import/export works as before
+      try{
+        database.ref('activities').set(activities);
+      }catch(e){
+        console.error('Error saving to Firebase', e);
+      }
+    }
 
     function renderAll(){
       // recalc range dynamically and rebuild if needed
@@ -285,6 +331,11 @@ ${a.desc||''}`;
 
     // click rapido en grid
     function attachQuickClick(){ daysCol.querySelectorAll('.day .grid').forEach(grid=>{
+      // remove previous listener safety
+      grid.replaceWith(grid.cloneNode(true));
+    });
+      // re-select grids after clone
+      daysCol.querySelectorAll('.day .grid').forEach(grid=>{
       grid.addEventListener('click', ev=>{
         const rect = grid.getBoundingClientRect(); const y = ev.clientY - rect.top; const minutes = currentMinHour*60 + (y / HOUR_PX) * 60; const hh = Math.floor(minutes/60).toString().padStart(2,'0'); let mm = Math.round(minutes%60/15)*15; if(mm===60) mm=0; inputStart.value = hh+':'+String(mm).padStart(2,'0'); let endMin = minutes + 60; const eh = Math.floor(endMin/60).toString().padStart(2,'0'); const em = Math.round(endMin%60/15)*15; inputEnd.value = eh+':'+String(em).padStart(2,'0'); inputDay.value = grid.parentElement.dataset.day; window.scrollTo({top:0,behavior:'smooth'});
       })
@@ -323,7 +374,8 @@ ${a.desc||''}`;
     }
 
     // init
-    load(); attachQuickClick();
+    load();
+    // attachQuickClick will be invoked inside buildGrid when Firebase data arrives and grid is built
     // expose for debug
     window.__camp = { activities, renderAll };
   </script>
