@@ -1,321 +1,339 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Calendario Campamento - Semana Santa 2026</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calendario Campamento - Semana Santa 2026</title>
+  <style>
+    :root{
+      --bg:#f4fbf6;
+      --card:#ffffff;
+      --accent:#2f855a;
+      --muted:#6b7280;
+      --hour-height:60px; /* px por hora */
+      --start-hour:8;
+      --end-hour:23;
+    }
+    *{box-sizing:border-box;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial}
+    body{margin:0;background:var(--bg);color:#0f172a;padding:18px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    h1{margin:0;font-size:20px}
+    .wrap{display:grid;grid-template-columns:360px 1fr;gap:18px;margin-top:16px}
 
-<!-- Firebase (v8) -->
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    /* panel */
+    .panel{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,0.06)}
+    label{display:block;font-size:13px;color:var(--muted);margin-top:8px}
+    input[type=text], textarea, select, input[type=time]{width:100%;padding:8px;border-radius:8px;border:1px solid #e6edf3;margin-top:6px}
+    textarea{min-height:80px;resize:vertical}
+    .row{display:flex;gap:8px}
+    .btn{display:inline-block;padding:8px 12px;border-radius:8px;border:none;cursor:pointer}
+    .btn-primary{background:var(--accent);color:white}
+    .btn-ghost{background:transparent;border:1px solid #e6edf3}
+    .small{font-size:13px}
+    .muted{color:var(--muted);font-size:13px}
 
-<style>
-:root{
-  --bg:#f4fbf6;
-  --card:#ffffff;
-  --accent:#2f855a;
-  --muted:#6b7280;
-  --hour-height:60px;
-  --start-hour:7;
-  --end-hour:27; /* 3AM del día siguiente */
-}
-*{box-sizing:border-box;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial}
-body{margin:0;background:var(--bg);color:#0f172a;padding:12px}
-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
-h1{margin:0;font-size:18px}
-.wrap{display:grid;grid-template-columns:360px 1fr;gap:14px;margin-top:12px;align-items:start;}
+    /* calendario */
+    .calendar{background:transparent}
+    .calendar-grid{display:grid;grid-template-columns:80px repeat(4,1fr);gap:6px}
+    .col-header{height:44px;display:flex;align-items:center;justify-content:center;font-weight:600;background:linear-gradient(90deg, rgba(47,133,90,0.08), rgba(47,133,90,0.02));border-radius:8px}
+    .hour-col{display:flex;flex-direction:column}
+    .hour-label{height:var(--hour-height);text-align:right;padding-right:10px;padding-top:8px;color:var(--muted);font-size:13px}
+    .day-column{background:var(--card);border-radius:8px;padding:0;position:relative;overflow:hidden;height:900px;box-shadow:0 4px 14px rgba(2,6,23,0.04)}((var(--end-hour) - var(--start-hour)) * var(--hour-height));box-shadow:0 4px 14px rgba(2,6,23,0.04)}
+    .hour-line{height:var(--hour-height);border-bottom:1px dashed #eef2f6}
 
-/* panel */
-.panel{background:var(--card);padding:12px;border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,0.06)}
-label{display:block;font-size:13px;color:var(--muted);margin-top:8px}
-input[type=text], textarea, select, input[type=time], input[type=color]{width:100%;padding:8px;border-radius:8px;border:1px solid #e6edf3;margin-top:6px}
-textarea{min-height:80px;resize:vertical}
-.row{display:flex;gap:8px}
-.btn{display:inline-block;padding:8px 12px;border-radius:8px;border:none;cursor:pointer}
-.btn-primary{background:var(--accent);color:white}
-.btn-ghost{background:transparent;border:1px solid #e6edf3}
-.small{font-size:13px}
-.muted{color:var(--muted);font-size:13px}
+    .activity{position:absolute;left:6px;right:6px;border-radius:8px;padding:6px 8px;color:#fff;box-shadow:0 6px 12px rgba(2,6,23,0.12);font-size:13px;cursor:pointer;overflow:visible;line-height:1.25;z-index:5}position:absolute;left:6px;right:6px;border-radius:8px;padding:6px 8px;color:#fff;box-shadow:0 6px 12px rgba(2,6,23,0.12);font-size:13px;cursor:pointer;overflow:visible;line-height:1.25}}
+    .activity .title{font-weight:700}
+    .activity .desc{font-size:12px;opacity:0.95}
 
-/* calendario - desktop */
-.calendar{background:transparent}
-.calendar-grid{display:grid;grid-template-columns:80px repeat(4,1fr);gap:8px;align-items:start}
-.col-header{height:44px;display:flex;align-items:center;justify-content:center;font-weight:600;background:linear-gradient(90deg, rgba(47,133,90,0.08), rgba(47,133,90,0.02));border-radius:8px;padding:6px}
-.hour-col{display:flex;flex-direction:column}
-.hour-label{height:var(--hour-height);text-align:right;padding-right:10px;padding-top:8px;color:var(--muted);font-size:13px}
-.day-column{background:var(--card);border-radius:8px;padding:0;position:relative;overflow:hidden;min-height:calc((var(--end-hour) - var(--start-hour)) * var(--hour-height));height:calc((var(--end-hour) - var(--start-hour)) * var(--hour-height));box-shadow:0 4px 14px rgba(2,6,23,0.04)}
-.hour-line{height:var(--hour-height);border-bottom:1px dashed #eef2f6}
+    .controls{display:flex;gap:8px;margin-top:10px;align-items:center}
+    .footer{margin-top:10px;font-size:13px;color:var(--muted)}
 
-/* actividad */
-.activity{
-  position:absolute;
-  border-radius:10px;
-  padding:8px 10px;
-  color:#fff;
-  box-shadow:0 6px 12px rgba(2,6,23,0.12);
-  font-size:14px;
-  cursor:pointer;
-  overflow:hidden;
-  line-height:1.2;
-  z-index:5;
-  box-sizing:border-box;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  min-width:48px;
-  user-select:none;
-}
-.activity:focus{outline:3px solid rgba(255,255,255,0.18);outline-offset:2px}
-.activity .title{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.activity .desc{font-size:12px;opacity:0.95;white-space:normal;overflow:hidden;margin-top:6px;line-height:1.2}
-
-/* MOBILE: mobile-first tweaks */
-@media (max-width:900px){
-  body{padding:8px}
-  .wrap{grid-template-columns:1fr;gap:10px}
-  .panel{order:-1}
-  .calendar-grid{
-    grid-template-columns:60px repeat(4, minmax(220px, 1fr));
-    gap:10px;
-    overflow-x:auto;
-    -webkit-overflow-scrolling:touch;
-    padding-bottom:10px;
-  }
-  .col-header{font-size:15px;padding:8px 10px}
-  .hour-label{padding-right:6px;font-size:12px;height:48px}
-  .activity{padding:8px 10px;font-size:15px;border-radius:12px}
-  .panel{padding:10px}
-  .btn{padding:10px 12px;font-size:15px}
-}
-
-/* MOBILE VERTICAL: stacked day view */
-@media (max-width:420px){
-  .calendar-grid{display:block;padding:6px;gap:8px}
-  .day-block{display:block;margin-bottom:12px;background:transparent}
-  .day-block .day-inner{display:flex;gap:8px}
-  .day-block .hours-side{width:68px;background:transparent;border-radius:8px;padding:6px;box-sizing:border-box}
-  .day-block .hours-side .hour-label{height:40px;padding-top:10px;font-size:12px;text-align:left;padding-left:6px;color:var(--muted)}
-  .day-block .day-column-mobile{flex:1;background:var(--card);border-radius:8px;position:relative;min-height:320px;height:auto;box-shadow:0 4px 14px rgba(2,6,23,0.04);overflow:hidden}
-  .day-block .day-header{font-weight:700;margin-bottom:6px}
-  .hour-line{border-bottom:1px dashed #eef2f6;height:40px}
-}
-
-#syncStatus{font-size:12px;color:var(--muted)}
-</style>
+    @media (max-width:900px){
+      .wrap{grid-template-columns:1fr}
+      .calendar-grid{grid-template-columns:60px repeat(4,1fr)}
+    }
+  </style>
 </head>
 <body>
-<header>
-  <div>
-    <h1>📅 Calendario - Campamento Semana Santa 2026</h1>
-    <div id="syncStatus" class="muted">Modo: local (sin Firebase)</div>
-  </div>
-  <div style="display:flex;gap:8px;align-items:center">
-    <button id="btnPrint" class="btn btn-ghost small">Imprimir / Guardar PDF</button>
-    <button id="btnExport" class="btn btn-ghost small">Descargar JSON</button>
-    <button id="btnImport" class="btn btn-ghost small">Importar JSON</button>
-  </div>
-</header>
-
-<div class="wrap">
-  <div class="panel">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <strong>Crear / Editar actividad</strong>
-      <button id="btnReset" class="btn btn-ghost small">Limpiar</button>
+  <header>
+    <div>
+      <h1>📅 Calendario - Campamento Semana Santa 2026</h1>
+      <div class="muted">Viernes 27 — Lunes 30 de marzo</div>
     </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button id="btnPrint" class="btn btn-ghost small">Imprimir / Guardar PDF</button>
+      <button id="btnExport" class="btn btn-ghost small">Descargar JSON</button>
+      <button id="btnImport" class="btn btn-ghost small">Importar JSON</button>
+    </div>
+  </header>
 
-    <label>Día</label>
-    <select id="inputDay">
-      <option>Viernes 27</option>
-      <option>Sábado 28</option>
-      <option>Domingo 29</option>
-      <option>Lunes 30</option>
-    </select>
-
-    <div class="row">
-      <div style="flex:1">
-        <label>Inicio</label>
-        <input id="inputStart" type="time" value="08:00" />
+  <div class="wrap">
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <strong>Crear / Editar actividad</strong>
+        <button id="btnReset" class="btn btn-ghost small">Limpiar</button>
       </div>
-      <div style="flex:1">
-        <label>Fin</label>
-        <input id="inputEnd" type="time" value="09:00" />
+
+      <label>Día</label>
+      <select id="inputDay">
+        <option>Viernes 27</option>
+        <option>Sábado 28</option>
+        <option>Domingo 29</option>
+        <option>Lunes 30</option>
+      </select>
+
+      <div class="row">
+        <div style="flex:1">
+          <label>Inicio</label>
+          <input id="inputStart" type="time" value="08:00" />
+        </div>
+        <div style="flex:1">
+          <label>Fin</label>
+          <input id="inputEnd" type="time" value="09:00" />
+        </div>
+      </div>
+
+      <label>Nombre</label>
+      <input id="inputTitle" type="text" placeholder="Ej. Ruta por la sierra" />
+
+      <label>Descripción</label>
+      <textarea id="inputDesc" placeholder="Detalles, materiales, quién dirige..."></textarea>
+
+      <label>Color</label>
+      <input id="inputColor" type="color" value="#60a5fa" />
+
+      <div class="controls">
+        <button id="btnAdd" class="btn btn-primary">Añadir actividad</button>
+        <button id="btnUpdate" class="btn btn-ghost" style="display:none">Guardar cambios</button>
+        <button id="btnDelete" class="btn btn-ghost" style="display:none">Borrar</button>
+      </div>
+
+      <div class="footer">Las actividades se guardan automáticamente en este equipo (localStorage). Puedes descargar el JSON para compartir o importar en otro equipo.</div>
+    </div>
+
+    <div class="calendar panel">
+      <div class="calendar-grid" id="calendarGrid">
+        <div></div>
+        <div class="col-header">Viernes 27</div>
+        <div class="col-header">Sábado 28</div>
+        <div class="col-header">Domingo 29</div>
+        <div class="col-header">Lunes 30</div>
+
+        <!-- horas y columnas -->
+        <div class="hour-col" id="hoursCol"></div>
+        <div class="day-column" data-day="Viernes 27"></div>
+        <div class="day-column" data-day="Sábado 28"></div>
+        <div class="day-column" data-day="Domingo 29"></div>
+        <div class="day-column" data-day="Lunes 30"></div>
       </div>
     </div>
-
-    <label>Nombre</label>
-    <input id="inputTitle" type="text" placeholder="Ej. Ruta por la sierra" />
-
-    <label>Descripción</label>
-    <textarea id="inputDesc" placeholder="Detalles, materiales, quién dirige..."></textarea>
-
-    <label>Color</label>
-    <input id="inputColor" type="color" value="#60a5fa" />
-
-    <div class="controls" style="display:flex;gap:8px;margin-top:10px">
-      <button id="btnAdd" class="btn btn-primary">Añadir actividad</button>
-      <button id="btnUpdate" class="btn btn-ghost" style="display:none">Guardar cambios</button>
-      <button id="btnDelete" class="btn btn-ghost" style="display:none">Borrar</button>
-    </div>
   </div>
 
-  <div class="calendar panel">
-    <div class="calendar-grid" id="calendarGrid"></div>
-  </div>
-</div>
+  <input id="fileInput" type="file" accept="application/json" style="display:none" />
 
-<input id="fileInput" type="file" accept="application/json" style="display:none" />
+  <script>
+    /* Configuración */
+    const DAYS = ["Viernes 27","Sábado 28","Domingo 29","Lunes 30"];
+    const START_H = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--start-hour')) || 8;
+    const END_H = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--end-hour')) || 23;
+    const HOUR_H = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--hour-height')) || 60;
 
-<script>
-/* =======================
-   Configuración Firebase
-======================= */
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyAhzhr7P7m1CDYZhQPwtP78OEm6jGwwDGE",
-  authDomain: "camp-sem-sant.firebaseapp.com",
-  databaseURL: "https://camp-sem-sant-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "camp-sem-sant",
-  storageBucket: "camp-sem-sant.firebasedapp.com",
-  messagingSenderId: "483863490995",
-  appId: "1:483863490995:web:5474b5a0984553baf29bc6"
-};
-let REMOTE_ENABLED = true;
+    const hoursCol = document.getElementById('hoursCol');
+    const dayCols = Array.from(document.querySelectorAll('.day-column'));
 
-/* =======================
-   Variables UI y tiempo
-======================= */
-const DAYS=["Viernes 27","Sábado 28","Domingo 29","Lunes 30"];
-const START_H=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--start-hour'))||7;
-const END_H=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--end-hour'))||27;
-const HOUR_H=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--hour-height'))||60;
+    // crear filas de horas
+    for(let h=START_H; h<END_H; h++){
+      const lab = document.createElement('div');
+      lab.className='hour-label';
+      lab.textContent = String(h).padStart(2,'0')+":00";
+      hoursCol.appendChild(lab);
+      // en cada col añadir linea
+      dayCols.forEach(c=>{
+        const line = document.createElement('div');
+        line.className='hour-line';
+        c.appendChild(line);
+      })
+    }
 
-const calendarGrid = document.getElementById('calendarGrid');
-const syncStatusEl = document.getElementById('syncStatus');
-const STORAGE_KEY = 'campamento-semanasanta-2026';
-let activities = [];
-let dayCols = [];
+    // util
+    const timeToMinutes = t=>{ // "HH:MM" -> minutes from 0:00
+      const [hh,mm] = t.split(':').map(Number); return hh*60 + mm;
+    }
 
-const inputDay=document.getElementById('inputDay');
-const inputStart=document.getElementById('inputStart');
-const inputEnd=document.getElementById('inputEnd');
-const inputTitle=document.getElementById('inputTitle');
-const inputDesc=document.getElementById('inputDesc');
-const inputColor=document.getElementById('inputColor');
-const btnAdd=document.getElementById('btnAdd');
-const btnUpdate=document.getElementById('btnUpdate');
-const btnDelete=document.getElementById('btnDelete');
-const btnReset=document.getElementById('btnReset');
-const btnPrint=document.getElementById('btnPrint');
-const btnExport=document.getElementById('btnExport');
-const btnImport=document.getElementById('btnImport');
-const fileInput=document.getElementById('fileInput');
-let editingId=null;
+    const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
 
-/* =======================
-   Helpers
-======================= */
-const timeToMinutes=t=>{ const [hh,mm]=String(t||'').split(':').map(Number); return Number.isNaN(hh)||Number.isNaN(mm)?0:hh*60+mm; };
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    // actividad store
+    let activities = [];
+    const STORAGE_KEY = 'campamento-semanasanta-2026';
 
-/* =======================
-   Firebase init
-======================= */
-let dbRef = null;
-function initFirebaseIfConfigured(){
-  try{
-    if(FIREBASE_CONFIG && Object.keys(FIREBASE_CONFIG).length > 2 && typeof firebase !== 'undefined'){
-      firebase.initializeApp(FIREBASE_CONFIG);
-      firebase.auth().signInAnonymously().catch(()=>{/* ok */});
-      dbRef = firebase.database().ref('activities');
-      REMOTE_ENABLED = true;
-      syncStatusEl.textContent = 'Modo: sincronización activa (Firebase)';
-      dbRef.on('value', snap=>{
-        const data = snap.val()||{};
-        activities = Object.keys(data).map(k=>({id:k,...data[k]}));
-        saveLocal(); renderAll();
+    // elementos form
+    const inputDay = document.getElementById('inputDay');
+    const inputStart = document.getElementById('inputStart');
+    const inputEnd = document.getElementById('inputEnd');
+    const inputTitle = document.getElementById('inputTitle');
+    const inputDesc = document.getElementById('inputDesc');
+    const inputColor = document.getElementById('inputColor');
+    const btnAdd = document.getElementById('btnAdd');
+    const btnUpdate = document.getElementById('btnUpdate');
+    const btnDelete = document.getElementById('btnDelete');
+    const btnReset = document.getElementById('btnReset');
+    const btnPrint = document.getElementById('btnPrint');
+    const btnExport = document.getElementById('btnExport');
+    const btnImport = document.getElementById('btnImport');
+    const fileInput = document.getElementById('fileInput');
+
+    let editingId = null;
+
+    function load(){
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        try{activities = JSON.parse(raw);}catch(e){activities=[]}
+      }
+      renderAll();
+    }
+
+    function save(){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(activities));
+    }
+
+    function renderAll(){
+      // limpiar columnas
+      dayCols.forEach(c=>{
+        // keep hour lines only
+        Array.from(c.querySelectorAll('.activity')).forEach(n=>n.remove());
       });
-    } else { REMOTE_ENABLED=false; syncStatusEl.textContent='Modo: local (sin Firebase)'; }
-  }catch(err){ REMOTE_ENABLED=false; syncStatusEl.textContent='Modo: local (error Firebase)'; console.warn(err);}
-}
 
-/* =======================
-   Build calendar layout
-======================= */
-function buildCalendarLayout(){
-  const isNarrow=window.innerWidth<=420;
-  calendarGrid.innerHTML='';
-
-  if(!isNarrow){
-    // desktop grid
-    const empty=document.createElement('div'); calendarGrid.appendChild(empty);
-    for(const d of DAYS){ const h=document.createElement('div'); h.className='col-header'; h.textContent=d; calendarGrid.appendChild(h);}
-    const hoursCol=document.createElement('div'); hoursCol.className='hour-col'; hoursCol.id='hoursCol';
-    for(let h=START_H;h<=END_H;h++){ const lab=document.createElement('div'); lab.className='hour-label'; lab.textContent=String(h%24).padStart(2,'0')+':00'; hoursCol.appendChild(lab);}
-    calendarGrid.appendChild(hoursCol);
-    for(const d of DAYS){
-      const col=document.createElement('div'); col.className='day-column'; col.dataset.day=d;
-      for(let h=START_H;h<=END_H;h++){ const line=document.createElement('div'); line.className='hour-line'; col.appendChild(line);}
-      calendarGrid.appendChild(col);
+      activities.forEach(a=>renderActivity(a));
     }
-    dayCols = Array.from(document.querySelectorAll('.day-column'));
-  } else {
-    // mobile stacked
-    for(const d of DAYS){
-      const block=document.createElement('div'); block.className='day-block';
-      const header=document.createElement('div'); header.className='day-header'; header.textContent=d; block.appendChild(header);
-      const inner=document.createElement('div'); inner.className='day-inner';
-      const hoursSide=document.createElement('div'); hoursSide.className='hours-side';
-      for(let h=START_H;h<=END_H;h++){ const lab=document.createElement('div'); lab.className='hour-label'; lab.textContent=String(h%24).padStart(2,'0')+':00'; hoursSide.appendChild(lab);}
-      inner.appendChild(hoursSide);
-      const col=document.createElement('div'); col.className='day-column-mobile'; col.dataset.day=d;
-      for(let h=START_H;h<=END_H;h++){ const line=document.createElement('div'); line.className='hour-line'; col.appendChild(line);}
-      inner.appendChild(col); block.appendChild(inner); calendarGrid.appendChild(block);
-    }
-    dayCols=Array.from(document.querySelectorAll('.day-column-mobile'));
-  }
 
-  dayCols.forEach(col=>{
-    col.onclick=null;
-    col.addEventListener('click', ev=>{
-      if(ev.target.closest('.activity')) return;
-      const rect=col.getBoundingClientRect();
-      const y=ev.clientY-rect.top;
-      const minutes=START_H*60+(y/HOUR_H)*60;
-      let hh=Math.floor(minutes/60), mm=Math.round((minutes%60)/15)*15;
-      if(mm===60){ hh+=1; mm=0; }
-      inputDay.value=col.dataset.day;
-      inputStart.value=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
-      let endMin=minutes+60; let endH=Math.floor(endMin/60); let endM=Math.round((endMin%60)/15)*15;
-      if(endM===60){ endH+=1; endM=0; }
-      if(endH>=24){ endH=3; endM=0; }
-      inputEnd.value=String(endH).padStart(2,'0')+':'+String(endM).padStart(2,'0');
-      window.scrollTo({top:0,behavior:'smooth'}); inputTitle.focus();
+    function renderActivity(a){
+      const col = dayCols.find(c=>c.dataset.day===a.day);
+      if(!col) return;
+      const container = col;
+      const startMin = timeToMinutes(a.start);
+      const endMin = timeToMinutes(a.end);
+      const topMin = clamp(startMin - START_H*60, 0, (END_H-START_H)*60);
+      const durMin = clamp(endMin - startMin, 15, (END_H-START_H)*60 - topMin);
+      const topPx = (topMin/60) * HOUR_H;
+      const heightPx = (durMin/60) * HOUR_H;
+
+      const el = document.createElement('div');
+      el.className='activity';
+      el.style.top = topPx + 'px';
+      el.style.height = Math.max(28, heightPx - 6) + 'px';
+      el.style.background = a.color;
+      el.dataset.id = a.id;
+      el.innerHTML = `<div class="title">${escapeHtml(a.title)}</div><div class="desc">${escapeHtml(a.start)} - ${escapeHtml(a.end)} ${a.desc?'<br>'+escapeHtml(a.desc):''}</div>`;
+      // native tooltip with full info (fix visibility on small blocks)
+      el.title = `${escapeHtml(a.title)} — ${escapeHtml(a.start)} - ${escapeHtml(a.end)}${a.desc? '
+' + escapeHtml(a.desc) : ''}`;
+
+      // click => editar
+      el.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        startEdit(a.id);
+      });
+
+      container.appendChild(el);
+    }
+
+    function escapeHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+    function resetForm(){
+      inputTitle.value=''; inputDesc.value=''; inputColor.value='#60a5fa'; inputStart.value='08:00'; inputEnd.value='09:00'; inputDay.value=DAYS[0];
+      editingId = null; btnAdd.style.display='inline-block'; btnUpdate.style.display='none'; btnDelete.style.display='none';
+    }
+
+    function addActivity(){
+      const a = collectForm();
+      if(!a) return;
+      a.id = Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+      activities.push(a);
+      save(); renderAll(); resetForm();
+    }
+
+    function collectForm(){
+      const title = inputTitle.value.trim(); if(!title){alert('Pon un nombre a la actividad'); return null}
+      const start = inputStart.value; const end = inputEnd.value;
+      if(!start || !end){alert('Pon hora de inicio y fin'); return null}
+      if(timeToMinutes(end) <= timeToMinutes(start)){alert('La hora de fin debe ser posterior al inicio'); return null}
+      return {day: inputDay.value, start, end, title, desc: inputDesc.value.trim(), color: inputColor.value};
+    }
+
+    function startEdit(id){
+      const a = activities.find(x=>x.id===id); if(!a) return;
+      editingId = id;
+      inputDay.value=a.day; inputStart.value=a.start; inputEnd.value=a.end; inputTitle.value=a.title; inputDesc.value=a.desc || ''; inputColor.value=a.color || '#60a5fa';
+      btnAdd.style.display='none'; btnUpdate.style.display='inline-block'; btnDelete.style.display='inline-block';
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+
+    function updateActivity(){
+      if(!editingId) return;
+      const idx = activities.findIndex(x=>x.id===editingId); if(idx<0) return;
+      const a = collectForm(); if(!a) return;
+      a.id = editingId; activities[idx]=a; save(); renderAll(); resetForm();
+    }
+
+    function deleteActivity(){
+      if(!editingId) return;
+      if(!confirm('¿Borrar esta actividad?')) return;
+      activities = activities.filter(x=>x.id!==editingId); save(); renderAll(); resetForm();
+    }
+
+    // events
+    btnAdd.addEventListener('click',addActivity);
+    btnUpdate.addEventListener('click',updateActivity);
+    btnDelete.addEventListener('click',deleteActivity);
+    btnReset.addEventListener('click',resetForm);
+
+    btnPrint.addEventListener('click', ()=>{ window.print(); });
+
+    btnExport.addEventListener('click', ()=>{
+      const dataStr = JSON.stringify(activities, null, 2);
+      const blob = new Blob([dataStr], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='campamento-planning.json'; a.click(); URL.revokeObjectURL(url);
     });
-  });
-}
 
-/* =======================
-   Render
-======================= */
-function renderAll(){
-  buildCalendarLayout();
-  dayCols.forEach(c=>{ Array.from(c.querySelectorAll('.activity')).forEach(n=>n.remove()); });
-  DAYS.forEach(day=>{
-    const acts=activities.filter(a=>a.day===day).map(a=>({...a,_startMin:timeToMinutes(a.start),_endMin:timeToMinutes(a.end)})).sort((a,b)=>a._startMin-b._startMin);
-    acts.forEach(renderActivity);
-  });
-}
+    btnImport.addEventListener('click', ()=>{ fileInput.click(); });
+    fileInput.addEventListener('change', (e)=>{
+      const f = e.target.files[0]; if(!f) return;
+      const reader = new FileReader(); reader.onload = ()=>{
+        try{
+          const parsed = JSON.parse(reader.result);
+          if(Array.isArray(parsed)){
+            if(confirm('¿Reemplazar las actividades locales con las del archivo? Pulsa CANCELAR para MERGEAR')){
+              activities = parsed; save(); renderAll();
+            }else{
+              activities = activities.concat(parsed); save(); renderAll();
+            }
+            alert('Importado ✔');
+          }else alert('JSON no válido');
+        }catch(err){alert('Error al leer JSON')}
+      };
+      reader.readAsText(f);
+    });
 
-function renderActivity(a){
-  const col=dayCols.find(c=>c.dataset.day===a.day); if(!col) return;
-  const startMin=a._startMin??timeToMinutes(a.start); const endMin=a._endMin??timeToMinutes(a.end);
-  const topPx=((startMin-START_H*60)/60)*HOUR_H; const heightPx=((endMin-startMin)/60)*HOUR_H;
-  const el=document.createElement('div'); el.className='activity'; el.style.top=topPx+'px';
-  el.style.height=Math.max(44,heightPx-6)+'px';
-  el.style.left='6px'; el.style.width='calc(100% - 12px)';
-  el.style.background=a.color||'#60a5fa';
-  el.dataset.id=a.id; el.tabIndex=0;
-  const titleDiv=document.createElement('div'); titleDiv.className='title'; titleDiv.textContent=a.title||'';
-  const descDiv=document.createElement('div'); descDiv.className='desc';
-  descDiv.innerHTML=`${escapeHtml(a.start)} - ${escape
+    // click en columna para crear actividad rápida
+    dayCols.forEach(col=>{
+      col.addEventListener('click', (ev)=>{
+        const rect = col.getBoundingClientRect();
+        const y = ev.clientY - rect.top; // px
+        const minutes = START_H*60 + (y / HOUR_H) * 60;
+        const hh = Math.floor(minutes/60).toString().padStart(2,'0');
+        const mm = Math.round(minutes%60/15)*15; // redondeo 15m
+        const mmstr = String(mm).padStart(2,'0');
+        inputDay.value = col.dataset.day; inputStart.value = hh+':'+mmstr;
+        // sugerir 1 hora después
+        let endMin = minutes + 60; const endH = Math.floor(endMin/60); const endM = Math.round(endMin%60/15)*15;
+        inputEnd.value = String(endH).padStart(2,'0')+':'+String(endM).padStart(2,'0');
+        window.scrollTo({top:0,behavior:'smooth'});
+      })
+    });
+
+    // initial load
+    load();
+  </script>
+</body>
+</html>
