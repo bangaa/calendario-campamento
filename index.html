@@ -140,23 +140,11 @@
 
   <script>
     /* CONFIG - full day (cubre 0:00 - 24:00) para poder meter cualquier hora */
-    const START_H = 0, END_H = 24, HOUR_PX = 48; // 24*48 = 1152px
-    const TOTAL_PX = (END_H - START_H) * HOUR_PX;
-
+    const DEFAULT_START_H = 0, DEFAULT_END_H = 24, HOUR_PX = 48; // base px per hour
     const days = ['Viernes 27','Sábado 28','Domingo 29','Lunes 30'];
+
     const hoursCol = document.getElementById('hoursCol');
     const daysCol = document.getElementById('daysCol');
-
-    // crear horas y líneas
-    for(let h=START_H; h<END_H; h++){
-      const lab = document.createElement('div'); lab.className='hour'; lab.textContent = String(h).padStart(2,'0')+':00'; hoursCol.appendChild(lab);
-      daysCol.querySelectorAll('.day .grid').forEach(g=>{ const line = document.createElement('div'); line.className='line'; g.appendChild(line); });
-    }
-    daysCol.querySelectorAll('.day .grid').forEach(g=>{ g.style.height = TOTAL_PX + 'px'; g.style.position = 'relative'; g.style.overflow = 'visible'; });
-
-    // util
-    const timeToMin = t=>{ const [hh,mm]=t.split(':').map(Number); return hh*60+mm; }
-    const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
     // storage
     const STORAGE_KEY = 'campamento-semanasanta-2026-v2';
@@ -183,17 +171,68 @@
 
     let editingId = null;
 
+    // helpers
+    const timeToMin = t=>{ const [hh,mm]=t.split(':').map(Number); return hh*60+mm; }
+    const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+    function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // dynamic grid range
+    let currentMinHour = DEFAULT_START_H;
+    let currentMaxHour = DEFAULT_END_H;
+
+    function buildGrid(minHour, maxHour){
+      // rebuild hours column and day grids according to range
+      hoursCol.innerHTML='';
+      const dayGrids = daysCol.querySelectorAll('.day .grid');
+      dayGrids.forEach(g=>{ g.innerHTML=''; });
+
+      for(let h=minHour; h<maxHour; h++){
+        const lab = document.createElement('div'); lab.className='hour'; lab.textContent = String((h%24)).padStart(2,'0')+':00'; hoursCol.appendChild(lab);
+        dayGrids.forEach(g=>{ const line = document.createElement('div'); line.className='line'; g.appendChild(line); });
+      }
+
+      const totalPx = (maxHour - minHour) * HOUR_PX;
+      dayGrids.forEach(g=>{ g.style.height = totalPx + 'px'; g.style.position = 'relative'; g.style.overflow = 'visible'; });
+
+      currentMinHour = minHour; currentMaxHour = maxHour;
+    }
+
+    function computeRangeFromActivities(){
+      // compute min/max hours based on activities so labels extend if events after midnight
+      let minH = DEFAULT_START_H; let maxH = DEFAULT_END_H;
+      activities.forEach(a=>{
+        let s = timeToMin(a.start); let e = timeToMin(a.end);
+        if(e <= s) e += 24*60; // crosses midnight
+        const sH = Math.floor(s/60);
+        const eH = Math.ceil(e/60);
+        minH = Math.min(minH, sH);
+        maxH = Math.max(maxH, eH);
+      });
+      // add padding 1 hour top/bottom
+      minH = Math.max(0, minH - 1);
+      maxH = Math.min(48, maxH + 1); // cap to avoid insane lengths
+      // ensure at least default range
+      minH = Math.min(minH, DEFAULT_START_H);
+      maxH = Math.max(maxH, DEFAULT_END_H);
+      return {minH, maxH};
+    }
+
     function load(){
       try{ activities = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }catch(e){ activities = []; }
+      // build initial grid based on activities
+      const range = computeRangeFromActivities();
+      buildGrid(range.minH, range.maxH);
       renderAll();
     }
     function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(activities)); }
 
-    function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
     function renderAll(){
+      // recalc range dynamically and rebuild if needed
+      const range = computeRangeFromActivities();
+      if(range.minH !== currentMinHour || range.maxH !== currentMaxHour){ buildGrid(range.minH, range.maxH); }
       daysCol.querySelectorAll('.day .grid').forEach(g=>{ g.querySelectorAll('.activity').forEach(n=>n.remove()); });
       activities.forEach(a=>renderActivity(a));
+      console.log('Rendered activities:', activities.length, document.querySelectorAll('.activity').length, 'hours range', currentMinHour+'-'+currentMaxHour);
     }
 
     function renderActivity(a){
@@ -201,12 +240,12 @@
       if(!dayEl) return;
       const grid = dayEl.querySelector('.grid');
 
-      // si end <= start => evento pasa a siguiente dia técnicamente, pero lo mostramos en el día seleccionado
       let startMin = timeToMin(a.start);
       let endMin = timeToMin(a.end);
-      if(endMin <= startMin){ endMin += 24*60; }
-      const topMin = clamp(startMin - START_H*60, 0, (END_H-START_H)*60);
-      const durMin = clamp(endMin - startMin, 15, (END_H-START_H)*60*2); // permitir hasta doble día si necesidad
+      if(endMin <= startMin) endMin += 24*60; // cross midnight -> still show on selected day
+
+      const topMin = clamp(startMin - currentMinHour*60, 0, (currentMaxHour-currentMinHour)*60);
+      const durMin = clamp(endMin - startMin, 15, (currentMaxHour-currentMinHour)*60*2);
       const topPx = (topMin/60) * HOUR_PX;
       const heightPx = (durMin/60) * HOUR_PX;
 
@@ -216,7 +255,8 @@
       el.style.background = a.color || '#60a5fa';
       el.dataset.id = a.id;
       el.innerHTML = `<div class="title">${escapeHtml(a.title)}</div><div class="time">${escapeHtml(a.start)} - ${escapeHtml(a.end)}</div>${a.desc?'<div class="desc">'+escapeHtml(a.desc)+'</div>':''}`;
-      el.title = `${a.title} — ${a.start} - ${a.end}\n${a.desc||''}`;
+      el.title = `${a.title} — ${a.start} - ${a.end}
+${a.desc||''}`;
       el.addEventListener('click', e=>{ e.stopPropagation(); startEdit(a.id); });
       grid.appendChild(el);
     }
@@ -224,7 +264,6 @@
     function collectForm(){
       const title = inputTitle.value.trim(); if(!title){ alert('Pon un nombre a la actividad'); return null }
       const start = inputStart.value; const end = inputEnd.value; if(!start||!end){ alert('Pon inicio y fin'); return null }
-      // no bloqueamos end <= start (aceptamos eventos que pasan a la madrugada)
       return { id: editingId || (Date.now().toString(36)+Math.random().toString(36).slice(2,6)), day: inputDay.value, start, end, title, desc: inputDesc.value.trim(), color: inputColor.value };
     }
 
@@ -245,11 +284,11 @@
     btnReset.addEventListener('click', resetForm);
 
     // click rapido en grid
-    daysCol.querySelectorAll('.day .grid').forEach(grid=>{
+    function attachQuickClick(){ daysCol.querySelectorAll('.day .grid').forEach(grid=>{
       grid.addEventListener('click', ev=>{
-        const rect = grid.getBoundingClientRect(); const y = ev.clientY - rect.top; const minutes = START_H*60 + (y / HOUR_PX) * 60; const hh = Math.floor(minutes/60).toString().padStart(2,'0'); let mm = Math.round(minutes%60/15)*15; if(mm===60) mm=0; inputStart.value = hh+':'+String(mm).padStart(2,'0'); let endMin = minutes + 60; const eh = Math.floor(endMin/60).toString().padStart(2,'0'); const em = Math.round(endMin%60/15)*15; inputEnd.value = eh+':'+String(em).padStart(2,'0'); inputDay.value = grid.parentElement.dataset.day; window.scrollTo({top:0,behavior:'smooth'});
+        const rect = grid.getBoundingClientRect(); const y = ev.clientY - rect.top; const minutes = currentMinHour*60 + (y / HOUR_PX) * 60; const hh = Math.floor(minutes/60).toString().padStart(2,'0'); let mm = Math.round(minutes%60/15)*15; if(mm===60) mm=0; inputStart.value = hh+':'+String(mm).padStart(2,'0'); let endMin = minutes + 60; const eh = Math.floor(endMin/60).toString().padStart(2,'0'); const em = Math.round(endMin%60/15)*15; inputEnd.value = eh+':'+String(em).padStart(2,'0'); inputDay.value = grid.parentElement.dataset.day; window.scrollTo({top:0,behavior:'smooth'});
       })
-    });
+    }); }
 
     // storage import/export
     btnExport.addEventListener('click', ()=>{ const dataStr = JSON.stringify(activities,null,2); const blob = new Blob([dataStr], {type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'campamento-planning.json'; a.click(); URL.revokeObjectURL(url); });
@@ -259,14 +298,13 @@
     // print
     btnPrint.addEventListener('click', ()=>{ window.print(); });
 
-    // export PNG via SVG foreignObject technique (works offline in modern browsers)
+    // export PNG via SVG foreignObject technique
     btnExportPng.addEventListener('click', async ()=>{
       try{
         const node = document.querySelector('.calendar-shell');
         const width = Math.min(node.scrollWidth, 1400);
         const height = node.scrollHeight;
         const clone = node.cloneNode(true);
-        // inline styles computed
         inlineAllStyles(clone);
         const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${width}' height='${height}'><foreignObject width='100%' height='100%'>${new XMLSerializer().serializeToString(clone)}</foreignObject></svg>`;
         const img = new Image(); const svg64 = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
@@ -278,17 +316,15 @@
       }catch(err){ alert('Error exportando imagen: '+err); }
     });
 
-    // helper: inline computed styles to cloned node so foreignObject renders well
     function inlineAllStyles(root){ const elems = root.querySelectorAll('*'); const win = document.defaultView; elems.forEach(el=>{ try{ const cs = win.getComputedStyle(el); let s=''; for(let i=0;i<cs.length;i++){ const prop = cs[i]; s += prop + ':' + cs.getPropertyValue(prop) + ';'; } el.setAttribute('style', s); }catch(e){} }); }
 
-    // sound on add (short pleasant blip)
+    // sound on add
     function playAddSound(){ try{ const ctx = new (window.AudioContext||window.webkitAudioContext)(); const o = ctx.createOscillator(); const g = ctx.createGain(); o.type='sine'; o.frequency.value=880; g.gain.value=0.0015; o.connect(g); g.connect(ctx.destination); o.start(); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.15); o.stop(ctx.currentTime+0.18); }catch(e){}
     }
 
     // init
-    load();
-
-    // debug: expose for console
+    load(); attachQuickClick();
+    // expose for debug
     window.__camp = { activities, renderAll };
   </script>
 </body>
